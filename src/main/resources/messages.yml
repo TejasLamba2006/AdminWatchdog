@@ -21,6 +21,8 @@ logging:
   console-command: "[%time%] [CONSOLE] %sender%: /%command%"
   player-command: "[%time%] %prefix%%player%: %command%"
   permission-command: "[%time%] [PERM] %player%: %command%"
+  creative-inventory: "[%time%] %prefix%%player%: took %amount%x %item% from creative inventory"
+  creative-inventory-detailed: "[%time%] %prefix%%player%: took %amount%x %item% (%material%) from creative inventory"
 
 # Discord webhook messages
 discord:
@@ -28,6 +30,18 @@ discord:
   console-command: "🖥️ **Console** executed: `/%command%`"
   player-command: "👤 **%player%** executed: `%command%`"
   permission-command: "🔑 **%player%** (with permission) executed: `%command%`"
+  creative-inventory: "🎨 **%player%** took **%amount%x %item%** from creative inventory"
+  creative-inventory-detailed: "🎨 **%player%** took **%amount%x %item%** (%material%) from creative inventory"
+  update-available: "🔄 **AdminWatchdog Update Available!** Current: %current% → Latest: %latest% | Download: %download%"
+
+# Update checker messages
+update:
+  notification: "&e&l[UPDATE] &eAdminWatchdog %latest% is available! You are using %current%. Download: &b%download%"
+  check-start: "Checking for updates..."
+  check-success: "Update check completed. Current version: %current%, Latest: %latest%"
+  check-failed: "Failed to check for updates: %error%"
+  up-to-date: "You are using the latest version (%current%)"
+  available: "Update available! %current% → %latest%"
 
 # Error messages
 errors:

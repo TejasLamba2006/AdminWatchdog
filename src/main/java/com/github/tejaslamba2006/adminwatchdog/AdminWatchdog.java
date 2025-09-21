@@ -7,6 +7,7 @@ public class AdminWatchdog extends JavaPlugin {
     private static AdminWatchdog instance;
     private DiscordManager dm;
     private ConfigManager configManager;
+    private UpdateChecker updateChecker;
 
     @Override
     public void onEnable() {
@@ -17,6 +18,7 @@ public class AdminWatchdog extends JavaPlugin {
         instance = this;
         configManager = new ConfigManager(this);
         dm = new DiscordManager(this);
+        updateChecker = new UpdateChecker(this);
 
         getServer().getPluginManager().registerEvents(new CommandListener(this), this);
 
@@ -24,11 +26,18 @@ public class AdminWatchdog extends JavaPlugin {
         this.getCommand("adminwatchdog").setExecutor(commandHandler);
         this.getCommand("adminwatchdog").setTabCompleter(commandHandler);
 
+        // Start update checker
+        updateChecker.startUpdateChecker();
+
         getLogger().info(configManager.getMessage("plugin.enabled"));
     }
 
     @Override
     public void onDisable() {
+        if (updateChecker != null) {
+            updateChecker.stopUpdateChecker();
+        }
+        MinecraftApiHelper.shutdown();
         getLogger().info(configManager.getMessage("plugin.disabled"));
     }
 
@@ -40,7 +49,15 @@ public class AdminWatchdog extends JavaPlugin {
         return dm;
     }
 
+    public DiscordManager getDiscordManager() {
+        return dm;
+    }
+
     public ConfigManager getConfigManager() {
         return configManager;
+    }
+
+    public UpdateChecker getUpdateChecker() {
+        return updateChecker;
     }
 }

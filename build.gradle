@@ -2,8 +2,13 @@ plugins {
     id 'java'
 }
 
-group = 'myplugin'
+group = 'com.github.tejaslamba2006'
 version = '0.5'
+
+compileJava {
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+}
 
 repositories {
     mavenCentral()
@@ -11,9 +16,10 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT' // PaperMC
+    compileOnly 'io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT'
+    implementation 'com.google.code.gson:gson:2.10.1'
 }
 
 jar {
-    archiveFileName = 'spycord.jar'
+    archiveFileName = 'AdminWatchdog.jar'
 }

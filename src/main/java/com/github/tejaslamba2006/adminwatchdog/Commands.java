@@ -55,6 +55,40 @@ public class Commands implements TabExecutor {
             return true;
         }
 
+        if (subcommand.equals("update") || subcommand.equals("checkupdate")) {
+            if (!sender.hasPermission("adminwatchdog.update.check")) {
+                sender.sendMessage(adminWatchdog.getConfigManager().getMessage("commands.no-permission"));
+                return true;
+            }
+
+            sender.sendMessage(adminWatchdog.getConfigManager().getMessage("update.check-start"));
+
+            adminWatchdog.getUpdateChecker().checkForUpdatesSync().thenAccept(result -> {
+                if (result.hasError()) {
+                    String message = adminWatchdog.getConfigManager().getMessage("update.check-failed", "%error%",
+                            result.getError());
+                    sender.sendMessage(message);
+                } else if (result.isUpdateAvailable()) {
+                    String message = adminWatchdog.getConfigManager().getMessage("update.available",
+                            "%current%", result.getCurrentVersion(),
+                            "%latest%", result.getLatestVersion());
+                    sender.sendMessage(message);
+                    sender.sendMessage("Download: " + result.getDownloadUrl());
+                } else {
+                    String message = adminWatchdog.getConfigManager().getMessage("update.up-to-date", "%current%",
+                            result.getCurrentVersion());
+                    sender.sendMessage(message);
+                }
+            }).exceptionally(ex -> {
+                String message = adminWatchdog.getConfigManager().getMessage("update.check-failed", "%error%",
+                        ex.getMessage());
+                sender.sendMessage(message);
+                return null;
+            });
+
+            return true;
+        }
+
         return false;
     }
 
@@ -62,7 +96,7 @@ public class Commands implements TabExecutor {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
             @NotNull String label, @NotNull String[] args) {
         if (args.length == 1) {
-            List<String> completions = Arrays.asList("version", "v", "ver", "reload", "rl");
+            List<String> completions = Arrays.asList("version", "v", "ver", "reload", "rl", "update", "checkupdate");
             List<String> result = new ArrayList<>();
             String current = args[0].toLowerCase();
 

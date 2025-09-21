@@ -6,7 +6,7 @@ api-version: "1.20"
 commands:
   adminwatchdog:
     description: "AdminWatchdog plugin commands"
-    usage: "/<command> <version|v|ver|reload|rl>"
+    usage: "/<command> <version|v|ver|reload|rl|update|checkupdate>"
     aliases: [aw, awdog]
 
 permissions:
@@ -15,6 +15,8 @@ permissions:
     children:
       adminwatchdog.reload: true
       adminwatchdog.monitor: true
+      adminwatchdog.update.check: true
+      adminwatchdog.update.notify: true
     default: op
 
   adminwatchdog.reload:
@@ -23,4 +25,12 @@ permissions:
 
   adminwatchdog.monitor:
     description: "Permission for monitoring commands (configurable)"
+    default: op
+
+  adminwatchdog.update.check:
+    description: "Allows manually checking for updates"
+    default: op
+
+  adminwatchdog.update.notify:
+    description: "Receive update notifications when available"
     default: op

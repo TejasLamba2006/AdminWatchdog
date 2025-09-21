@@ -1,12 +1,15 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
 import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryCreativeEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.server.ServerCommandEvent;
+import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -177,6 +180,98 @@ public class CommandListener implements Listener {
         boolean shouldLog = false;
         boolean hasSpecialPermission = false;
         String prefix = "";
+    }
+
+    @EventHandler
+    public void onCreativeInventory(InventoryCreativeEvent event) {
+        if (!plugin.getConfigManager().isCreativeInventoryMonitoringEnabled()) {
+            return;
+        }
+
+        if (!(event.getWhoClicked() instanceof Player)) {
+            return;
+        }
+
+        Player player = (Player) event.getWhoClicked();
+        ItemStack item = event.getCursor();
+
+        if (item == null || item.getType() == Material.AIR) {
+            return;
+        }
+
+        boolean shouldLog = shouldMonitorCreativeInventory(player);
+        if (!shouldLog) {
+            return;
+        }
+
+        logCreativeInventoryAction(player, item);
+    }
+
+    private boolean shouldMonitorCreativeInventory(Player player) {
+        if (plugin.getConfigManager().isCreativeInventoryOpsOnly() && !player.isOp()) {
+            return false;
+        }
+
+        if (plugin.getConfigManager().isCreativeInventoryPermissionsOnly()) {
+            if (!plugin.getConfigManager().isPermissionMonitoringEnabled()) {
+                return false;
+            }
+            return hasMonitoredPermission(player);
+        }
+
+        if (plugin.getConfigManager().isOpsMonitoringEnabled() && player.isOp()) {
+            return true;
+        }
+
+        if (plugin.getConfigManager().isPermissionMonitoringEnabled() && hasMonitoredPermission(player)) {
+            return true;
+        }
+
+        return !plugin.getConfigManager().isCreativeInventoryOpsOnly() &&
+                !plugin.getConfigManager().isCreativeInventoryPermissionsOnly();
+    }
+
+    private void logCreativeInventoryAction(Player player, ItemStack item) {
+        String playerName = player.getName();
+        String itemName = getItemDisplayName(item);
+        String materialName = item.getType().name();
+        int amount = item.getAmount();
+
+        String prefix = "";
+
+        if (player.isOp()) {
+            prefix = plugin.getConfigManager().getPrefix("op");
+        } else if (hasMonitoredPermission(player)) {
+            prefix = plugin.getConfigManager().getPrefix("permission");
+        } else {
+            prefix = plugin.getConfigManager().getPrefix("normal");
+        }
+
+        String time = plugin.getConfigManager().getFormattedTime();
+        String messageKey = plugin.getConfigManager().isCreativeInventoryDetailedLogging()
+                ? "logging.creative-inventory-detailed"
+                : "logging.creative-inventory";
+
+        String logEntry = plugin.getConfigManager().getMessage(messageKey,
+                TIME_PLACEHOLDER, time,
+                "%prefix%", prefix,
+                PLAYER_PLACEHOLDER, playerName,
+                "%amount%", String.valueOf(amount),
+                "%item%", itemName,
+                "%material%", materialName);
+
+        plugin.getDiscord().sendCreativeInventoryAction(playerName, item);
+
+        if (plugin.getConfigManager().isFileLoggingEnabled()) {
+            writeToLogFile(logEntry);
+        }
+    }
+
+    private String getItemDisplayName(ItemStack item) {
+        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
+            return item.getItemMeta().displayName().toString();
+        }
+        return item.getType().name().toLowerCase().replace('_', ' ');
     }
 
     private void writeToLogFile(String logEntry) {

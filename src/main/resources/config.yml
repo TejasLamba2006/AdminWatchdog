@@ -1,0 +1,102 @@
+# AdminWatchdog Configuration File
+
+# Discord Integration
+discord:
+  webhook-url: ""
+  enabled: true
+
+  # Rich embed settings for creative inventory
+  embeds:
+    enabled: true
+    # Use rich embeds with item images and descriptions
+    creative-inventory: true
+    # Embed color (hex color code)
+    color: "#00d4aa"
+    # Include item description from API
+    include-description: true
+    # Include technical details (stack size, renewable, etc.)
+    include-technical-details: true
+    # Fallback to simple message if API fails
+    fallback-to-simple: true
+
+# Monitoring Settings
+monitoring:
+  # Monitor operators
+  ops: true
+
+  # Monitor players with specific permissions
+  permissions:
+    enabled: true
+    # List of permissions to monitor
+    list:
+      - "adminwatchdog.monitor"
+      - "minecraft.command.*"
+      - "bukkit.command.*"
+      - "essentials.*"
+
+  # Monitor console commands
+  console: true
+
+  # Monitor gamemode changes
+  gamemode-changes: true
+
+  # Monitor creative inventory actions
+  creative-inventory:
+    enabled: true
+    # Only monitor ops taking items from creative
+    ops-only: false
+    # Only monitor players with specific permissions
+    permissions-only: false
+    # Log item details (name, amount, enchantments)
+    detailed-logging: true
+
+  # Monitor all commands (not just ops/permission holders)
+  all-commands: false
+
+  # Blacklist certain commands from being logged
+  command-blacklist:
+    enabled: true
+    commands:
+      - "login"
+      - "register"
+      - "password"
+      - "2fa"
+
+# Logging Settings
+logging:
+  # Enable file logging
+  file-logging: true
+
+  # Log file name format (use %date% for current date)
+  log-file-format: "commands-%date%.log"
+
+  # Maximum log file size in MB (0 = unlimited)
+  max-file-size: 10
+
+  # Number of old log files to keep
+  keep-old-logs: 5
+
+# Update Checker Settings
+update-checker:
+  # Enable automatic update checking
+  enabled: true
+  # GitHub repository (owner/repo)
+  repository: "tejaslamba2006/AdminWatchdog"
+  # Check interval in minutes
+  check-interval: 60
+  # Send Discord notifications for updates
+  discord-notifications: true
+
+# General Settings
+general:
+  # Check for updates on startup
+  check-updates: true
+
+  # Debug mode (more verbose logging)
+  debug: false
+
+  # Plugin prefix for messages
+  prefix: "&7[&6AdminWatchdog&7]&r "
+
+  # Date/time format for logs
+  time-format: "yyyy-MM-dd HH:mm:ss"

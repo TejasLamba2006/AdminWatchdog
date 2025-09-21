@@ -72,6 +72,22 @@ public class ConfigManager {
         return plugin.getConfig().getBoolean("monitoring.gamemode-changes", true);
     }
 
+    public boolean isCreativeInventoryMonitoringEnabled() {
+        return plugin.getConfig().getBoolean("monitoring.creative-inventory.enabled", true);
+    }
+
+    public boolean isCreativeInventoryOpsOnly() {
+        return plugin.getConfig().getBoolean("monitoring.creative-inventory.ops-only", false);
+    }
+
+    public boolean isCreativeInventoryPermissionsOnly() {
+        return plugin.getConfig().getBoolean("monitoring.creative-inventory.permissions-only", false);
+    }
+
+    public boolean isCreativeInventoryDetailedLogging() {
+        return plugin.getConfig().getBoolean("monitoring.creative-inventory.detailed-logging", true);
+    }
+
     public boolean isAllCommandsMonitoringEnabled() {
         return plugin.getConfig().getBoolean("monitoring.all-commands", false);
     }
@@ -92,6 +108,30 @@ public class ConfigManager {
         return plugin.getConfig().getString("discord.webhook-url", "");
     }
 
+    public boolean isDiscordEmbedsEnabled() {
+        return plugin.getConfig().getBoolean("discord.embeds.enabled", true);
+    }
+
+    public boolean isCreativeInventoryEmbedsEnabled() {
+        return plugin.getConfig().getBoolean("discord.embeds.creative-inventory", true);
+    }
+
+    public String getEmbedColor() {
+        return plugin.getConfig().getString("discord.embeds.color", "#00d4aa");
+    }
+
+    public boolean isIncludeDescription() {
+        return plugin.getConfig().getBoolean("discord.embeds.include-description", true);
+    }
+
+    public boolean isIncludeTechnicalDetails() {
+        return plugin.getConfig().getBoolean("discord.embeds.include-technical-details", true);
+    }
+
+    public boolean isFallbackToSimple() {
+        return plugin.getConfig().getBoolean("discord.embeds.fallback-to-simple", true);
+    }
+
     public boolean isFileLoggingEnabled() {
         return plugin.getConfig().getBoolean("logging.file-logging", true);
     }
@@ -102,6 +142,23 @@ public class ConfigManager {
 
     public String getPrefix(String type) {
         return getMessage("prefixes." + type, "");
+    }
+
+    // Update Checker Settings
+    public boolean isUpdateCheckerEnabled() {
+        return plugin.getConfig().getBoolean("update-checker.enabled", true);
+    }
+
+    public String getUpdateCheckerRepo() {
+        return plugin.getConfig().getString("update-checker.repository", "tejaslamba2006/AdminWatchdog");
+    }
+
+    public int getUpdateCheckInterval() {
+        return plugin.getConfig().getInt("update-checker.check-interval", 60);
+    }
+
+    public boolean isUpdateNotificationDiscordEnabled() {
+        return plugin.getConfig().getBoolean("update-checker.discord-notifications", true);
     }
 
     public void saveMessages() {
