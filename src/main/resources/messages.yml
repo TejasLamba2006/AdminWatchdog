@@ -1,0 +1,43 @@
+# AdminWatchdog Messages Configuration
+# All plugin messages are configurable here
+# Use %player%, %command%, %oldmode%, %newmode%, %time%, %sender% as placeholders
+
+# Plugin startup/shutdown messages
+plugin:
+  enabled: "AdminWatchdog Is Active"
+  disabled: "AdminWatchdog Is Inactive"
+
+# Command messages
+commands:
+  usage: "Usage: /adminwatchdog <version|v|ver|reload>"
+  version: "AdminWatchdog plugin version: %version%"
+  reload-success: "AdminWatchdog configuration reloaded successfully!"
+  reload-failed: "Failed to reload AdminWatchdog configuration!"
+  no-permission: "You don't have permission to use this command!"
+
+# Log format messages
+logging:
+  gamemode-change: "[%time%] [OP] %player%: switched gamemode from %oldmode% to %newmode%"
+  console-command: "[%time%] [CONSOLE] %sender%: /%command%"
+  player-command: "[%time%] %prefix%%player%: %command%"
+  permission-command: "[%time%] [PERM] %player%: %command%"
+
+# Discord webhook messages
+discord:
+  gamemode-change: "🎮 **%player%** switched gamemode from **%oldmode%** to **%newmode%**"
+  console-command: "🖥️ **Console** executed: `/%command%`"
+  player-command: "👤 **%player%** executed: `%command%`"
+  permission-command: "🔑 **%player%** (with permission) executed: `%command%`"
+
+# Error messages
+errors:
+  webhook-not-set: "Webhook URL is not set in config.yml!"
+  webhook-failed: "Failed to send webhook: HTTP %code%"
+  log-file-creation-failed: "Failed to create log file"
+  config-load-failed: "Failed to load configuration file: %file%"
+
+# Prefixes for different user types
+prefixes:
+  op: "[OP] "
+  permission: "[PERM] "
+  normal: ""

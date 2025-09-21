@@ -1,0 +1,26 @@
+name: AdminWatchdog
+version: "1.0"
+main: com.github.tejaslamba2006.adminwatchdog.AdminWatchdog
+api-version: "1.20"
+
+commands:
+  adminwatchdog:
+    description: "AdminWatchdog plugin commands"
+    usage: "/<command> <version|v|ver|reload|rl>"
+    aliases: [aw, awdog]
+
+permissions:
+  adminwatchdog.*:
+    description: "All AdminWatchdog permissions"
+    children:
+      adminwatchdog.reload: true
+      adminwatchdog.monitor: true
+    default: op
+
+  adminwatchdog.reload:
+    description: "Allows reloading plugin configuration"
+    default: op
+
+  adminwatchdog.monitor:
+    description: "Permission for monitoring commands (configurable)"
+    default: op

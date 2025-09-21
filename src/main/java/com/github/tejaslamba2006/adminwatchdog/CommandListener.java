@@ -1,0 +1,191 @@
+package com.github.tejaslamba2006.adminwatchdog;
+
+import org.bukkit.GameMode;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
+import org.bukkit.event.server.ServerCommandEvent;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
+
+public class CommandListener implements Listener {
+
+    private static final String TIME_PLACEHOLDER = "%time%";
+    private static final String PLAYER_PLACEHOLDER = "%player%";
+    private static final String COMMAND_PLACEHOLDER = "%command%";
+
+    private final File logFile;
+    private final AdminWatchdog plugin;
+
+    public CommandListener(AdminWatchdog plugin) {
+        this.plugin = plugin;
+        File dataFolder = plugin.getDataFolder();
+        if (!dataFolder.exists()) {
+            dataFolder.mkdirs();
+        }
+
+        logFile = new File(dataFolder, "commands.log");
+        try {
+            if (!logFile.exists()) {
+                boolean created = logFile.createNewFile();
+                if (!created) {
+                    plugin.getLogger().warning(plugin.getConfigManager().getMessage("errors.log-file-creation-failed"));
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @EventHandler
+    public void onGamemodeChange(PlayerGameModeChangeEvent event) {
+        if (!plugin.getConfigManager().isGamemodeMonitoringEnabled()) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        String playerName = player.getName();
+        GameMode newMode = event.getNewGameMode();
+        GameMode oldMode = player.getGameMode();
+
+        boolean shouldLog = false;
+
+        if (plugin.getConfigManager().isOpsMonitoringEnabled() && player.isOp()) {
+            shouldLog = true;
+        }
+
+        if (plugin.getConfigManager().isPermissionMonitoringEnabled()) {
+            List<String> monitoredPerms = plugin.getConfigManager().getMonitoredPermissions();
+            for (String perm : monitoredPerms) {
+                if (player.hasPermission(perm)) {
+                    shouldLog = true;
+                    break;
+                }
+            }
+        }
+
+        if (!shouldLog) {
+            return;
+        }
+
+        String time = plugin.getConfigManager().getFormattedTime();
+        String logEntry = plugin.getConfigManager().getMessage("logging.gamemode-change",
+                TIME_PLACEHOLDER, time,
+                PLAYER_PLACEHOLDER, playerName,
+                "%oldmode%", oldMode.name(),
+                "%newmode%", newMode.name());
+
+        plugin.getDiscord().sendGamemodeChange(playerName, oldMode.name(), newMode.name());
+
+        if (plugin.getConfigManager().isFileLoggingEnabled()) {
+            writeToLogFile(logEntry);
+        }
+    }
+
+    @EventHandler
+    public void onConsoleCommand(ServerCommandEvent event) {
+        if (!plugin.getConfigManager().isConsoleMonitoringEnabled()) {
+            return;
+        }
+
+        String senderName = event.getSender().getName();
+        String command = event.getCommand();
+
+        if (plugin.getConfigManager().isCommandBlacklisted("/" + command)) {
+            return;
+        }
+
+        String time = plugin.getConfigManager().getFormattedTime();
+        String logEntry = plugin.getConfigManager().getMessage("logging.console-command",
+                TIME_PLACEHOLDER, time,
+                "%sender%", senderName,
+                COMMAND_PLACEHOLDER, command);
+
+        plugin.getDiscord().sendConsoleCommand(senderName, command);
+
+        if (plugin.getConfigManager().isFileLoggingEnabled()) {
+            writeToLogFile(logEntry);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        String command = event.getMessage();
+
+        if (plugin.getConfigManager().isCommandBlacklisted(command)) {
+            return;
+        }
+
+        MonitoringResult result = shouldMonitorPlayer(player);
+        if (!result.shouldLog) {
+            return;
+        }
+
+        logPlayerCommand(player.getName(), command, result.prefix, result.hasSpecialPermission);
+    }
+
+    private MonitoringResult shouldMonitorPlayer(Player player) {
+        MonitoringResult result = new MonitoringResult();
+
+        if (plugin.getConfigManager().isAllCommandsMonitoringEnabled()) {
+            result.shouldLog = true;
+            result.prefix = plugin.getConfigManager().getPrefix("normal");
+            return result;
+        }
+
+        if (plugin.getConfigManager().isOpsMonitoringEnabled() && player.isOp()) {
+            result.shouldLog = true;
+            result.prefix = plugin.getConfigManager().getPrefix("op");
+        }
+
+        if (plugin.getConfigManager().isPermissionMonitoringEnabled() && hasMonitoredPermission(player)) {
+            result.shouldLog = true;
+            result.hasSpecialPermission = true;
+            result.prefix = plugin.getConfigManager().getPrefix("permission");
+        }
+
+        return result;
+    }
+
+    private boolean hasMonitoredPermission(Player player) {
+        List<String> monitoredPerms = plugin.getConfigManager().getMonitoredPermissions();
+        return monitoredPerms.stream().anyMatch(player::hasPermission);
+    }
+
+    private void logPlayerCommand(String playerName, String command, String prefix, boolean hasSpecialPermission) {
+        String time = plugin.getConfigManager().getFormattedTime();
+        String logEntry = plugin.getConfigManager().getMessage("logging.player-command",
+                TIME_PLACEHOLDER, time,
+                "%prefix%", prefix,
+                PLAYER_PLACEHOLDER, playerName,
+                COMMAND_PLACEHOLDER, command);
+
+        plugin.getDiscord().sendPlayerCommand(playerName, command, hasSpecialPermission);
+
+        if (plugin.getConfigManager().isFileLoggingEnabled()) {
+            writeToLogFile(logEntry);
+        }
+    }
+
+    private static class MonitoringResult {
+        boolean shouldLog = false;
+        boolean hasSpecialPermission = false;
+        String prefix = "";
+    }
+
+    private void writeToLogFile(String logEntry) {
+        try (FileWriter writer = new FileWriter(logFile, true)) {
+            writer.write(logEntry + System.lineSeparator());
+        } catch (IOException e) {
+            if (plugin.getConfigManager().isDebugEnabled()) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
