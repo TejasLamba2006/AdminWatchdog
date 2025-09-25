@@ -34,7 +34,6 @@ AdminWatchdog is a powerful Minecraft plugin designed to monitor and log adminis
 
 #### Creative Inventory Monitoring
 
-*Rich embed showing detailed item information*
 <img width="421" height="433" alt="image" src="https://github.com/user-attachments/assets/86ed1745-3765-43f7-b030-d618a49c4d44" />
 
 
