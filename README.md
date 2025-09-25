@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![License](https://img.shields.io/github/license/tejaslamba2006/AdminWatchdog?style=for-the-badge)
+![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
 ![Java](https://img.shields.io/badge/Java-17+-orange?style=for-the-badge&logo=java)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.20+-green?style=for-the-badge&logo=minecraft)
 ![Downloads](https://img.shields.io/github/downloads/tejaslamba2006/AdminWatchdog/total?style=for-the-badge)
@@ -212,31 +212,27 @@ cd AdminWatchdog
 - Minecraft 1.20+
 - Paper/Spigot server
 
+**⚠️ Note:** The source code is provided for reference only. Modification, redistribution, or reuse is prohibited under the license terms.
+
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+**Important:** This project uses a proprietary license that restricts code modifications and reuse.
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### How to Contribute
 
-## 📝 Changelog
+- 🐛 **Report Bugs** - [Open an issue](https://github.com/tejaslamba2006/AdminWatchdog/issues) describing the problem
+- 💡 **Suggest Features** - [Request new features](https://github.com/tejaslamba2006/AdminWatchdog/issues) with detailed descriptions
+- 📖 **Improve Documentation** - Suggest documentation improvements via issues
+- 🧪 **Test Beta Versions** - Help test pre-release versions
 
-### Latest Version
+### ⚠️ Contribution Restrictions
 
-- ✨ Added custom command response system
-- 🎨 Improved Discord embed formatting  
-- 🐛 Fixed Material ID display in embeds
-- 🔧 Enhanced error handling and logging
-- 🚀 Production-ready optimizations
+- ❌ **No code pull requests** - Source code modifications are not accepted
+- ❌ **No forks for modification** - Creating derivative works is prohibited  
+- ❌ **No code suggestions** - Direct code contributions cannot be merged
+- ✅ **Ideas and feedback welcome** - Conceptual suggestions are appreciated
 
-[View Full Changelog](CHANGELOG.md)
-
-## 🐛 Known Issues
-
-- None currently reported
+For special licensing arrangements or partnership opportunities, please [contact me directly](https://github.com/TejasLamba2006).
 
 ## 💡 Feature Requests
 
@@ -248,12 +244,23 @@ Need help? Here's how to get support:
 
 1. 📖 Check the [Documentation](#-features)
 2. 🔍 Search [Existing Issues](https://github.com/tejaslamba2006/AdminWatchdog/issues)
-3. 💬 Join our [Discord Server](https://discord.gg/YOUR_DISCORD) *(if you have one)*
+3. 💬 Join our [Discord Server](https://discord.gg/msEkYDWpXM)
 4. 🐛 [Create a New Issue](https://github.com/tejaslamba2006/AdminWatchdog/issues/new)
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under a **Proprietary License** - see the [LICENSE](LICENSE) file for details.
+
+### ⚠️ Important License Notes
+
+- ❌ **Source code cannot be copied, modified, or reused**
+- ❌ **No derivative works or modifications allowed**  
+- ❌ **Reverse engineering is prohibited**
+- ✅ **Commercial use of compiled plugin is allowed**
+- ✅ **Distribution of original compiled plugin is permitted**
+- ⚖️ **All rights reserved by TejasLamba2006**
+
+For licensing inquiries or special permissions, please [contact me](https://github.com/TejasLamba2006).
 
 ## ⭐ Show Your Support
 
