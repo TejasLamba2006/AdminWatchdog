@@ -145,7 +145,8 @@ One of AdminWatchdog's most powerful features is the ability to configure custom
 
 ### Available Placeholders
 
-- `%player%` - The player who executed the command
+- `%player%` - The player who executed the command (for player commands)
+- `%sender%` - The sender who executed the command (for console commands)
 - `%command%` - The full command that was executed  
 - `%time%` - Formatted timestamp
 
@@ -161,9 +162,13 @@ One of AdminWatchdog's most powerful features is the ability to configure custom
 custom-responses:
   enabled: true
   
-  # Critical Commands
+  # Critical Commands (Player)
   op: "🔐 **CRITICAL** - %player% gave OP to someone! <@&123456789> %time%"
   deop: "🔐 **CRITICAL** - %player% removed OP from someone! <@&123456789> %time%"
+  
+  # Critical Commands (Console)
+  "/stop": "🛑 **SERVER SHUTDOWN** - Console is stopping the server! <@&123456789> %time%"
+  "/reload": "🔄 **SERVER RELOAD** - %sender% reloaded server at %time%"
   
   # Moderation Commands  
   ban: "⚠️ **BAN** - %player% banned a player at %time%"

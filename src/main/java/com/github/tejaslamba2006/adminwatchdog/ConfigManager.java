@@ -5,11 +5,16 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 
 public class ConfigManager {
+
+    private static final int CURRENT_CONFIG_VERSION = 1;
+    private static final String CONFIG_VERSION_KEY = "config-version";
 
     private final AdminWatchdog plugin;
     private FileConfiguration messagesConfig;
@@ -17,6 +22,7 @@ public class ConfigManager {
 
     public ConfigManager(AdminWatchdog plugin) {
         this.plugin = plugin;
+        updateConfigIfNeeded();
         loadMessages();
     }
 
@@ -28,8 +34,73 @@ public class ConfigManager {
         messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
     }
 
-    public void reloadConfigs() {
+    private void updateConfigIfNeeded() {
+        plugin.saveDefaultConfig();
         plugin.reloadConfig();
+
+        int currentVersion = plugin.getConfig().getInt(CONFIG_VERSION_KEY, 0);
+
+        if (currentVersion < CURRENT_CONFIG_VERSION) {
+            plugin.getLogger().info("Updating config from version " + currentVersion + " to " + CURRENT_CONFIG_VERSION);
+            updateConfig(currentVersion);
+        } else if (currentVersion > CURRENT_CONFIG_VERSION) {
+            plugin.getLogger().warning("Config version (" + currentVersion + ") is newer than plugin version ("
+                    + CURRENT_CONFIG_VERSION + "). Some features may not work correctly.");
+        }
+    }
+
+    private void updateConfig(int oldVersion) {
+        try {
+            FileConfiguration currentConfig = plugin.getConfig();
+
+            InputStream defaultConfigStream = plugin.getResource("config.yml");
+            if (defaultConfigStream == null) {
+                plugin.getLogger().warning("Could not find default config.yml in plugin jar!");
+                return;
+            }
+
+            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(
+                    new java.io.InputStreamReader(defaultConfigStream, java.nio.charset.StandardCharsets.UTF_8));
+
+            addMissingKeys(currentConfig, defaultConfig, "");
+
+            currentConfig.set(CONFIG_VERSION_KEY, CURRENT_CONFIG_VERSION);
+
+            plugin.saveConfig();
+            plugin.getLogger().info("Config updated successfully to version " + CURRENT_CONFIG_VERSION);
+
+            defaultConfigStream.close();
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to update config: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void addMissingKeys(FileConfiguration current, FileConfiguration defaults, String path) {
+        Set<String> defaultKeys = defaults.getConfigurationSection(path.isEmpty() ? "" : path) != null
+                ? defaults.getConfigurationSection(path.isEmpty() ? "" : path).getKeys(false)
+                : defaults.getKeys(false);
+
+        for (String key : defaultKeys) {
+            String fullPath = path.isEmpty() ? key : path + "." + key;
+
+            if (defaults.isConfigurationSection(fullPath)) {
+                if (!current.isConfigurationSection(fullPath)) {
+                    current.createSection(fullPath);
+                }
+                addMissingKeys(current, defaults, fullPath);
+            } else {
+                if (!current.contains(fullPath)) {
+                    Object defaultValue = defaults.get(fullPath);
+                    current.set(fullPath, defaultValue);
+                    plugin.getLogger().info("Added new config key: " + fullPath + " = " + defaultValue);
+                }
+            }
+        }
+    }
+
+    public void reloadConfigs() {
+        updateConfigIfNeeded();
         loadMessages();
     }
 
@@ -144,17 +215,16 @@ public class ConfigManager {
         return getMessage("prefixes." + type, "");
     }
 
-    // Update Checker Settings
     public boolean isUpdateCheckerEnabled() {
         return plugin.getConfig().getBoolean("update-checker.enabled", true);
     }
 
     public String getUpdateCheckerRepo() {
-        return plugin.getConfig().getString("update-checker.repository", "tejaslamba2006/AdminWatchdog");
+        return "tejaslamba2006/AdminWatchdog";
     }
 
     public int getUpdateCheckInterval() {
-        return plugin.getConfig().getInt("update-checker.check-interval", 60);
+        return 60;
     }
 
     public boolean isUpdateNotificationDiscordEnabled() {

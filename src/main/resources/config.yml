@@ -21,6 +21,7 @@ discord:
 
 # Custom Command Responses
 # When specific commands are run, send custom messages to Discord
+# Works for both player and console commands
 custom-responses:
   enabled: true
   # Examples: (remove the # to enable)
@@ -28,7 +29,10 @@ custom-responses:
   # kick: "⚠️ **ADMIN ACTION** - %player% used kick command at %time%"
   # op: "🔐 **CRITICAL** - %player% used OP command! <@&ROLE_ID_HERE> at %time%"
   # gamemode: "🎮 **GAMEMODE** - %player% changed gamemode at %time%"
-  # Available placeholders: %player%, %command%, %time%
+  # For console commands, use %sender% instead of %player%:
+  # "/stop": "🛑 **SERVER SHUTDOWN** - Console is stopping the server at %time%! <@&ADMIN_ROLE_ID>"
+  # "/reload": "🔄 **SERVER RELOAD** - %sender% reloaded server at %time%"
+  # Available placeholders: %player%, %sender%, %command%, %time%
   # You can use Discord mentions like <@USER_ID>, <@&ROLE_ID>, or @everyone
 
 # Monitoring Settings
@@ -92,10 +96,6 @@ logging:
 update-checker:
   # Enable automatic update checking
   enabled: true
-  # GitHub repository (owner/repo)
-  repository: "tejaslamba2006/AdminWatchdog"
-  # Check interval in minutes
-  check-interval: 60
   # Send Discord notifications for updates
   discord-notifications: true
 
@@ -112,3 +112,6 @@ general:
 
   # Date/time format for logs
   time-format: "yyyy-MM-dd HH:mm:ss"
+
+# Don't change this unless you know what you're doing
+config-version: 1

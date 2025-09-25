@@ -302,7 +302,6 @@ public final class DiscordManager {
     private String getCustomItemName(ItemStack item) {
         try {
             if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-                // Use PlainTextComponentSerializer to get clean text without formatting
                 return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
                         .serialize(item.getItemMeta().displayName()).trim();
             }
@@ -320,7 +319,6 @@ public final class DiscordManager {
                 return List.of();
             }
 
-            // Use PlainTextComponentSerializer to get clean text without formatting
             return item.getItemMeta().lore().stream()
                     .map(component -> {
                         try {

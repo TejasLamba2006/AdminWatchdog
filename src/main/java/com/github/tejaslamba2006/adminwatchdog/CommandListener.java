@@ -99,6 +99,10 @@ public class CommandListener implements Listener {
         String senderName = event.getSender().getName();
         String command = event.getCommand();
 
+        if (plugin.getConfigManager().isCustomCommandResponsesEnabled()) {
+            handleCustomConsoleCommandResponse(senderName, "/" + command);
+        }
+
         if (plugin.getConfigManager().isCommandBlacklisted("/" + command)) {
             return;
         }
@@ -120,7 +124,6 @@ public class CommandListener implements Listener {
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
         String command = event.getMessage();
-
         if (plugin.getConfigManager().isCustomCommandResponsesEnabled()) {
             handleCustomCommandResponse(player, command);
         }
@@ -144,6 +147,23 @@ public class CommandListener implements Listener {
             if (!response.isEmpty()) {
                 String formattedResponse = response
                         .replace(PLAYER_PLACEHOLDER, player.getName())
+                        .replace(COMMAND_PLACEHOLDER, command)
+                        .replace(TIME_PLACEHOLDER, plugin.getConfigManager().getFormattedTime());
+
+                if (plugin.getConfigManager().isDiscordEnabled()) {
+                    plugin.getDiscordManager().sendToDiscord(formattedResponse);
+                }
+            }
+        }
+    }
+
+    private void handleCustomConsoleCommandResponse(String senderName, String command) {
+        String cleanCommand = command.split(" ")[0];
+        if (plugin.getConfigManager().hasCustomCommandResponse(cleanCommand)) {
+            String response = plugin.getConfigManager().getCustomCommandResponse(cleanCommand);
+            if (!response.isEmpty()) {
+                String formattedResponse = response
+                        .replace("%sender%", senderName)
                         .replace(COMMAND_PLACEHOLDER, command)
                         .replace(TIME_PLACEHOLDER, plugin.getConfigManager().getFormattedTime());
 

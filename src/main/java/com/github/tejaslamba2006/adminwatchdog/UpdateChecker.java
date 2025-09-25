@@ -172,9 +172,8 @@ public final class UpdateChecker {
                 }
             }
 
-            return false; // Versions are equal
+            return false; 
         } catch (NumberFormatException e) {
-            // Fallback to string comparison if version format is non-standard
             return !current.equals(latest);
         }
     }
