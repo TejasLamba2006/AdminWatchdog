@@ -83,7 +83,7 @@ public class CommandListener implements Listener {
                 "%oldmode%", oldMode.name(),
                 "%newmode%", newMode.name());
 
-        plugin.getDiscord().sendGamemodeChange(playerName, oldMode.name(), newMode.name());
+        plugin.getDiscordManager().sendGamemodeChange(playerName, oldMode.name(), newMode.name());
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
@@ -109,7 +109,7 @@ public class CommandListener implements Listener {
                 "%sender%", senderName,
                 COMMAND_PLACEHOLDER, command);
 
-        plugin.getDiscord().sendConsoleCommand(senderName, command);
+        plugin.getDiscordManager().sendConsoleCommand(senderName, command);
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
@@ -121,6 +121,10 @@ public class CommandListener implements Listener {
         Player player = event.getPlayer();
         String command = event.getMessage();
 
+        if (plugin.getConfigManager().isCustomCommandResponsesEnabled()) {
+            handleCustomCommandResponse(player, command);
+        }
+
         if (plugin.getConfigManager().isCommandBlacklisted(command)) {
             return;
         }
@@ -131,6 +135,23 @@ public class CommandListener implements Listener {
         }
 
         logPlayerCommand(player.getName(), command, result.prefix, result.hasSpecialPermission);
+    }
+
+    private void handleCustomCommandResponse(Player player, String command) {
+        String cleanCommand = command.split(" ")[0];
+        if (plugin.getConfigManager().hasCustomCommandResponse(cleanCommand)) {
+            String response = plugin.getConfigManager().getCustomCommandResponse(cleanCommand);
+            if (!response.isEmpty()) {
+                String formattedResponse = response
+                        .replace(PLAYER_PLACEHOLDER, player.getName())
+                        .replace(COMMAND_PLACEHOLDER, command)
+                        .replace(TIME_PLACEHOLDER, plugin.getConfigManager().getFormattedTime());
+
+                if (plugin.getConfigManager().isDiscordEnabled()) {
+                    plugin.getDiscordManager().sendToDiscord(formattedResponse);
+                }
+            }
+        }
     }
 
     private MonitoringResult shouldMonitorPlayer(Player player) {
@@ -169,7 +190,7 @@ public class CommandListener implements Listener {
                 PLAYER_PLACEHOLDER, playerName,
                 COMMAND_PLACEHOLDER, command);
 
-        plugin.getDiscord().sendPlayerCommand(playerName, command, hasSpecialPermission);
+        plugin.getDiscordManager().sendPlayerCommand(playerName, command, hasSpecialPermission);
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
@@ -260,7 +281,7 @@ public class CommandListener implements Listener {
                 "%item%", itemName,
                 "%material%", materialName);
 
-        plugin.getDiscord().sendCreativeInventoryAction(playerName, item);
+        plugin.getDiscordManager().sendCreativeInventoryAction(playerName, item);
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);

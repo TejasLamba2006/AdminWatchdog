@@ -6,20 +6,22 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import org.bukkit.Material;
-import org.bukkit.inventory.meta.PotionMeta;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
 
+import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 
-public class DiscordManager {
+public final class DiscordManager {
 
     private static final String TIME_PLACEHOLDER = "%time%";
     private static final String PLAYER_PLACEHOLDER = "%player%";
     private static final String COMMAND_PLACEHOLDER = "%command%";
     private static final String SENDER_PLACEHOLDER = "%sender%";
+    private static final int MAX_MESSAGE_LENGTH = 1000;
+    private static final int MAX_LORE_LENGTH = 200;
 
     private final AdminWatchdog plugin;
     private final MinecraftApiHelper apiHelper;
@@ -110,25 +112,27 @@ public class DiscordManager {
     }
 
     private void sendCreativeInventoryEmbed(String playerName, ItemStack item) {
-        apiHelper.getItemData(item).thenAccept(itemData -> {
+        CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(item);
+
+        itemDataFuture.thenAccept(itemData -> {
             try {
                 String embedJson = createCreativeInventoryEmbed(playerName, item, itemData);
                 sendJsonToDiscord(embedJson);
             } catch (Exception e) {
-                if (plugin.getConfigManager().isFallbackToSimple()) {
-                    sendCreativeInventorySimple(playerName, item);
-                } else if (plugin.getConfigManager().isDebugEnabled()) {
-                    plugin.getLogger().warning("Failed to send embed: " + e.getMessage());
-                }
+                handleEmbedError(e, playerName, item);
             }
         }).exceptionally(ex -> {
-            if (plugin.getConfigManager().isFallbackToSimple()) {
-                sendCreativeInventorySimple(playerName, item);
-            } else if (plugin.getConfigManager().isDebugEnabled()) {
-                plugin.getLogger().warning("Failed to fetch item data: " + ex.getMessage());
-            }
+            handleEmbedError(ex, playerName, item);
             return null;
         });
+    }
+
+    private void handleEmbedError(Throwable e, String playerName, ItemStack item) {
+        if (plugin.getConfigManager().isFallbackToSimple()) {
+            sendCreativeInventorySimple(playerName, item);
+        } else if (plugin.getConfigManager().isDebugEnabled()) {
+            plugin.getLogger().warning("Failed to send embed: " + e.getMessage());
+        }
     }
 
     private void sendCreativeInventorySimple(String playerName, ItemStack item) {
@@ -195,8 +199,8 @@ public class DiscordManager {
         List<String> lore = getItemLore(item);
         if (!lore.isEmpty()) {
             String loreText = String.join("\\n", lore);
-            if (loreText.length() > 200) {
-                loreText = loreText.substring(0, 197) + "...";
+            if (loreText.length() > MAX_LORE_LENGTH) {
+                loreText = loreText.substring(0, MAX_LORE_LENGTH - 3) + "...";
             }
             embedJson.append(",{\"name\":\"Lore\",\"value\":\"").append(safeJsonString(loreText))
                     .append("\",\"inline\":false}");
@@ -360,8 +364,8 @@ public class DiscordManager {
 
         String escaped = escapeJson(text);
 
-        if (escaped.length() > 1000) {
-            escaped = escaped.substring(0, 997) + "...";
+        if (escaped.length() > MAX_MESSAGE_LENGTH) {
+            escaped = escaped.substring(0, MAX_MESSAGE_LENGTH - 3) + "...";
         }
 
         return escaped;

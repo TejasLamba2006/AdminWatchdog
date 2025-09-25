@@ -19,6 +19,18 @@ discord:
     # Fallback to simple message if API fails
     fallback-to-simple: true
 
+# Custom Command Responses
+# When specific commands are run, send custom messages to Discord
+custom-responses:
+  enabled: true
+  # Examples: (remove the # to enable)
+  # ban: "⚠️ **ADMIN ACTION** - %player% used ban command at %time%"
+  # kick: "⚠️ **ADMIN ACTION** - %player% used kick command at %time%"
+  # op: "🔐 **CRITICAL** - %player% used OP command! <@&ROLE_ID_HERE> at %time%"
+  # gamemode: "🎮 **GAMEMODE** - %player% changed gamemode at %time%"
+  # Available placeholders: %player%, %command%, %time%
+  # You can use Discord mentions like <@USER_ID>, <@&ROLE_ID>, or @everyone
+
 # Monitoring Settings
 monitoring:
   # Monitor operators

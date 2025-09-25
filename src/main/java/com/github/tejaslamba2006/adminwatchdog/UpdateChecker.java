@@ -17,7 +17,13 @@ import java.net.URL;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
-public class UpdateChecker {
+public final class UpdateChecker {
+
+    private static final String DEFAULT_REPO = "tejaslamba2006/AdminWatchdog";
+    private static final String GITHUB_API_URL = "https://api.github.com/repos/%s/releases/latest";
+    private static final long STARTUP_DELAY_TICKS = 100L;
+    private static final int CONNECTION_TIMEOUT = 5000;
+    private static final int READ_TIMEOUT = 10000;
 
     private final AdminWatchdog plugin;
     private final String githubRepo;
@@ -26,8 +32,6 @@ public class UpdateChecker {
     private String latestVersion;
     private String downloadUrl;
     private boolean updateAvailable = false;
-    private static final String DEFAULT_REPO = "tejaslamba2006/AdminWatchdog";
-    private static final String GITHUB_API_URL = "https://api.github.com/repos/%s/releases/latest";
 
     public UpdateChecker(AdminWatchdog plugin) {
         this.plugin = plugin;
@@ -35,15 +39,12 @@ public class UpdateChecker {
         this.githubRepo = plugin.getConfigManager().getUpdateCheckerRepo();
     }
 
-    /**
-     * Start automatic update checking with configured interval
-     */
     public void startUpdateChecker() {
         if (!plugin.getConfigManager().isUpdateCheckerEnabled()) {
             return;
         }
 
-        Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, this::checkForUpdates, 100L);
+        Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, this::checkForUpdates, STARTUP_DELAY_TICKS);
 
         long intervalTicks = plugin.getConfigManager().getUpdateCheckInterval() * 20L * 60L;
         updateTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::checkForUpdates, intervalTicks,
@@ -113,9 +114,6 @@ public class UpdateChecker {
         }
     }
 
-    /**
-     * Perform the actual update check
-     */
     private UpdateResult performUpdateCheck() throws IOException {
         String repoUrl = String.format(GITHUB_API_URL, githubRepo.isEmpty() ? DEFAULT_REPO : githubRepo);
 
@@ -124,8 +122,8 @@ public class UpdateChecker {
         connection.setRequestMethod("GET");
         connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
         connection.setRequestProperty("User-Agent", "AdminWatchdog-UpdateChecker/1.0");
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(10000);
+        connection.setConnectTimeout(CONNECTION_TIMEOUT);
+        connection.setReadTimeout(READ_TIMEOUT);
 
         int responseCode = connection.getResponseCode();
         if (responseCode != 200) {
@@ -144,12 +142,11 @@ public class UpdateChecker {
 
         String latestVersion = json.get("tag_name").getAsString();
         if (latestVersion.startsWith("v")) {
-            latestVersion = latestVersion.substring(1); // Remove 'v' prefix if present
+            latestVersion = latestVersion.substring(1);
         }
 
         String downloadUrl = json.get("html_url").getAsString();
 
-        // Try to get direct download URL for .jar file
         if (json.has("assets") && json.get("assets").isJsonArray() && json.get("assets").getAsJsonArray().size() > 0) {
             JsonObject firstAsset = json.get("assets").getAsJsonArray().get(0).getAsJsonObject();
             if (firstAsset.has("browser_download_url")) {

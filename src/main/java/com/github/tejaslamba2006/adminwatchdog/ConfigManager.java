@@ -168,4 +168,17 @@ public class ConfigManager {
             plugin.getLogger().severe("Could not save messages.yml: " + e.getMessage());
         }
     }
+
+    public boolean hasCustomCommandResponse(String command) {
+        return plugin.getConfig().contains("custom-responses." + command.toLowerCase().replace("/", ""));
+    }
+
+    public String getCustomCommandResponse(String command) {
+        String cleanCommand = command.toLowerCase().replace("/", "");
+        return plugin.getConfig().getString("custom-responses." + cleanCommand, "");
+    }
+
+    public boolean isCustomCommandResponsesEnabled() {
+        return plugin.getConfig().getBoolean("custom-responses.enabled", false);
+    }
 }

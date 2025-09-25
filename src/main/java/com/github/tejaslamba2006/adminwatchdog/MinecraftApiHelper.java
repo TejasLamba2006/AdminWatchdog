@@ -7,10 +7,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MinecraftApiHelper {
+public final class MinecraftApiHelper {
 
     private static final String IMAGE_BASE_URL = "https://mc.nerothe.com/img/1.21.8";
-    private static final ExecutorService executor = Executors.newCachedThreadPool();
+    private static final ExecutorService executor = Executors.newCachedThreadPool(r -> {
+        Thread thread = new Thread(r, "AdminWatchdog-ApiHelper");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private static final String DEFAULT_DESCRIPTION = "Item taken from creative inventory";
 
     public MinecraftApiHelper(AdminWatchdog plugin) {
     }
@@ -25,7 +30,7 @@ public class MinecraftApiHelper {
 
         return new ItemData(
                 formattedName,
-                "Item taken from creative inventory",
+                DEFAULT_DESCRIPTION,
                 imageUrl,
                 false,
                 false);
@@ -56,7 +61,9 @@ public class MinecraftApiHelper {
     }
 
     public static void shutdown() {
-        executor.shutdown();
+        if (!executor.isShutdown()) {
+            executor.shutdown();
+        }
     }
 
     public static class ItemData {
