@@ -7,6 +7,7 @@
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.20+-green?style=for-the-badge&logo=minecraft)
 ![Downloads](https://img.shields.io/github/downloads/tejaslamba2006/AdminWatchdog/total?style=for-the-badge)
 ![Stars](https://img.shields.io/github/stars/tejaslamba2006/AdminWatchdog?style=for-the-badge)
+![Sponsor](https://img.shields.io/github/sponsors/TejasLamba2006?style=for-the-badge&logo=github&logoColor=white)
 
 **A comprehensive Minecraft server monitoring plugin that tracks admin activities and sends Discord notifications**
 
@@ -261,7 +262,7 @@ If you found this plugin helpful, please consider:
 - ⭐ **Starring** this repository
 - 🍴 **Forking** for your own modifications
 - 📢 **Sharing** with other server administrators
-<iframe src="https://github.com/sponsors/TejasLamba2006/card" title="Sponsor TejasLamba2006" height="225" width="600" style="border: 0;"></iframe>
+- ☕ **[Sponsoring on GitHub](https://github.com/sponsors/TejasLamba2006)** to support development
 
 ## 🙏 Acknowledgments
 
