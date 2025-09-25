@@ -1,5 +1,6 @@
 # 🛡️ AdminWatchdog
 
+![alt text](logo.png)
 <div align="center">
 
 ![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
@@ -36,21 +37,17 @@ AdminWatchdog is a powerful Minecraft plugin designed to monitor and log adminis
 
 <img width="421" height="433" alt="image" src="https://github.com/user-attachments/assets/86ed1745-3765-43f7-b030-d618a49c4d44" />
 
-
 #### Command Execution Alerts
 
 <img width="993" height="150" alt="image" src="https://github.com/user-attachments/assets/31d78544-8499-4ab1-89ea-0edcb153023a" />
-
 
 #### Custom Command Responses
 
 <img width="806" height="70" alt="image" src="https://github.com/user-attachments/assets/e64af8ac-be4c-403a-b376-a0694cce6191" />
 
-
 #### Gamemode Change Notifications
 
 <img width="641" height="144" alt="image" src="https://github.com/user-attachments/assets/de961a9e-2f48-41a2-b208-d2fe41ddab50" />
-
 
 ## 🚀 Features
 
