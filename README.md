@@ -11,7 +11,7 @@
 
 **A comprehensive Minecraft server monitoring plugin that tracks admin activities and sends Discord notifications**
 
-[📥 Download](https://github.com/tejaslamba2006/AdminWatchdog/releases) • [📖 Documentation](#-features) • [🐛 Report Bug](https://github.com/tejaslamba2006/AdminWatchdog/issues) • [💡 Request Feature](https://github.com/tejaslamba2006/AdminWatchdog/issues)
+[📥 Download](https://modrinth.com/plugin/adminwatchdog) • [📖 Documentation](#-features) • [🐛 Report Bug](https://github.com/tejaslamba2006/AdminWatchdog/issues) • [💡 Request Feature](https://github.com/tejaslamba2006/AdminWatchdog/issues)
 
 </div>
 

@@ -140,23 +140,15 @@ public final class UpdateChecker {
 
         JsonObject json = JsonParser.parseString(response.toString()).getAsJsonObject();
 
-        String latestVersion = json.get("tag_name").getAsString();
-        if (latestVersion.startsWith("v")) {
-            latestVersion = latestVersion.substring(1);
+        String fetchedLatestVersion = json.get("tag_name").getAsString();
+        if (fetchedLatestVersion.startsWith("v")) {
+            fetchedLatestVersion = fetchedLatestVersion.substring(1);
         }
 
-        String downloadUrl = json.get("html_url").getAsString();
 
-        if (json.has("assets") && json.get("assets").isJsonArray() && json.get("assets").getAsJsonArray().size() > 0) {
-            JsonObject firstAsset = json.get("assets").getAsJsonArray().get(0).getAsJsonObject();
-            if (firstAsset.has("browser_download_url")) {
-                downloadUrl = firstAsset.get("browser_download_url").getAsString();
-            }
-        }
+        boolean isNewer = isNewerVersion(currentVersion, fetchedLatestVersion);
 
-        boolean isNewer = isNewerVersion(currentVersion, latestVersion);
-
-        return new UpdateResult(isNewer, currentVersion, latestVersion, downloadUrl, null);
+        return new UpdateResult(isNewer, currentVersion, fetchedLatestVersion, "https://modrinth.com/plugin/adminwatchdog", null);
     }
 
     /**
