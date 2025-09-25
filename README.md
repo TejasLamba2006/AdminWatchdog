@@ -39,24 +39,18 @@ AdminWatchdog is a powerful Minecraft plugin designed to monitor and log adminis
 
 #### Command Execution Alerts
 
-*Real-time command monitoring with player information*
+<img width="993" height="150" alt="image" src="https://github.com/user-attachments/assets/31d78544-8499-4ab1-89ea-0edcb153023a" />
 
-![Command Alerts](screenshots/command-alerts.png)
-> **Note:** Screenshot placeholder - Upload your webhook screenshot here
 
 #### Custom Command Responses
 
-*Configurable alerts with role mentions for critical commands*
+<img width="806" height="70" alt="image" src="https://github.com/user-attachments/assets/e64af8ac-be4c-403a-b376-a0694cce6191" />
 
-![Custom Responses](screenshots/custom-responses.png)
-> **Note:** Screenshot placeholder - Upload your webhook screenshot here
 
 #### Gamemode Change Notifications
 
-*Tracking gamemode switches*
+<img width="641" height="144" alt="image" src="https://github.com/user-attachments/assets/de961a9e-2f48-41a2-b208-d2fe41ddab50" />
 
-![Gamemode Changes](screenshots/gamemode-changes.png)
-> **Note:** Screenshot placeholder - Upload your webhook screenshot here
 
 ## 🚀 Features
 
