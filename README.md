@@ -1,282 +1,272 @@
-# 🛡️ AdminWatchdog
+# AdminWatchdog
 
 ![alt text](logo.png)
 <div align="center">
 
 ![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
-![Java](https://img.shields.io/badge/Java-17+-orange?style=for-the-badge&logo=java)
+![Java](https://img.shields.io/badge/Java-21+-orange?style=for-the-badge&logo=java)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.20+-green?style=for-the-badge&logo=minecraft)
 ![Downloads](https://img.shields.io/github/downloads/tejaslamba2006/AdminWatchdog/total?style=for-the-badge)
 ![Stars](https://img.shields.io/github/stars/tejaslamba2006/AdminWatchdog?style=for-the-badge)
 ![Sponsor](https://img.shields.io/github/sponsors/TejasLamba2006?style=for-the-badge&logo=github&logoColor=white)
 
-**A comprehensive Minecraft server monitoring plugin that tracks admin activities and sends Discord notifications**
+**Server administration monitoring with Discord webhook integration**
 
-[📥 Download](https://modrinth.com/plugin/adminwatchdog) • [📖 Documentation](#-features) • [🐛 Report Bug](https://github.com/tejaslamba2006/AdminWatchdog/issues) • [💡 Request Feature](https://github.com/tejaslamba2006/AdminWatchdog/issues)
+[Download](https://modrinth.com/plugin/adminwatchdog) | [Documentation](#features) | [Issues](https://github.com/tejaslamba2006/AdminWatchdog/issues)
 
 </div>
 
-## 🌟 Overview
+---
 
-AdminWatchdog is a powerful Minecraft plugin designed to monitor and log administrative activities on your server. With real-time Discord notifications, rich embeds, and comprehensive logging, you'll never miss important server events again.
+## Overview
 
-### ✨ Key Highlights
+AdminWatchdog monitors administrative actions on Minecraft servers and dispatches notifications via Discord webhooks. The plugin supports granular permission-based monitoring, wildcard command pattern matching, and async I/O operations for minimal performance impact.
 
-- 🔔 **Real-time Discord Notifications** - Instant webhook alerts for admin actions
-- 🎨 **Rich Embeds** - Beautiful Discord embeds with item images and detailed information
-- 🎯 **Custom Command Responses** - Configurable alerts for specific commands with role mentions
-- 📊 **Creative Inventory Tracking** - Monitor items taken from creative mode
-- 🔄 **Auto-Updates** - Built-in update checker keeps your plugin current
-- 🛡️ **Permission-Based Monitoring** - Flexible monitoring based on permissions or OP status
+### Core Features
 
-## 📸 Screenshots
+- **Discord Webhook Integration** - Async HTTP POST to Discord webhook endpoints with embed support
+- **Pattern-Based Command Matching** - Wildcard patterns for monitoring specific command structures (e.g., `lp user * permission set *`)
+- **Permission-Driven Monitoring** - Configurable monitoring based on OP status or permission nodes
+- **Creative Inventory Tracking** - ItemStack monitoring with Guava-cached item metadata
+- **Bypass System** - Granular bypass permissions for trusted administrators
+- **Async I/O** - Non-blocking file logging and webhook dispatch via CompletableFuture
 
-### Discord Webhook Examples
+## Architecture
 
-#### Creative Inventory Monitoring
+```
+AdminWatchdog
+├── CommandListener      # Event handlers for PlayerCommandPreprocessEvent, ServerCommandEvent, etc.
+├── ConfigManager        # YAML configuration with wildcard pattern matching engine
+├── DiscordManager       # Async webhook dispatch with embed builder
+├── MinecraftApiHelper   # Guava-cached item data with 512-entry LRU cache
+└── UpdateChecker        # GitHub API polling for version checks
+```
+
+## Screenshots
+
+### Discord Webhook Output
+
+**Creative Inventory Embed**
 
 <img width="421" height="433" alt="image" src="https://github.com/user-attachments/assets/86ed1745-3765-43f7-b030-d618a49c4d44" />
 
-#### Command Execution Alerts
+**Command Logging**
 
 <img width="993" height="150" alt="image" src="https://github.com/user-attachments/assets/31d78544-8499-4ab1-89ea-0edcb153023a" />
 
-#### Custom Command Responses
+**Custom Response Triggers**
 
 <img width="806" height="70" alt="image" src="https://github.com/user-attachments/assets/e64af8ac-be4c-403a-b376-a0694cce6191" />
 
-#### Gamemode Change Notifications
+**Gamemode Change Events**
 
 <img width="641" height="144" alt="image" src="https://github.com/user-attachments/assets/de961a9e-2f48-41a2-b208-d2fe41ddab50" />
 
-## 🚀 Features
+## Features
 
-### 📡 **Discord Integration**
+### Discord Integration
 
-- **Webhook Support** - Send notifications to any Discord channel
-- **Rich Embeds** - Beautiful formatted messages with item images
-- **Custom Responses** - Configure specific messages for any command
-- **Role Mentions** - Alert specific roles for critical actions
+- Webhook POST with JSON payload construction
+- Rich embed support with thumbnails, fields, and color coding
+- Role/user mention parsing (`<@&ROLE_ID>`, `<@USER_ID>`)
+- Automatic retry-safe async dispatch
 
-### 🔍 **Monitoring Capabilities**
+### Monitoring Subsystems
 
-- **Command Monitoring** - Track all admin commands
-- **Creative Inventory** - Monitor items taken from creative mode
-- **Gamemode Changes** - Log all gamemode switches
-- **Console Commands** - Track server console activity
-- **Permission-Based** - Monitor by OP status or specific permissions
+| Subsystem | Event Source | Configurable |
+|-----------|--------------|--------------|
+| Command Monitoring | `PlayerCommandPreprocessEvent` | Yes |
+| Console Monitoring | `ServerCommandEvent` | Yes |
+| Creative Inventory | `InventoryCreativeEvent` | Yes |
+| Gamemode Changes | `PlayerGameModeChangeEvent` | Yes |
+| Custom Responses | Pattern-matched commands | Yes |
 
-### ⚙️ **Configuration Options**
+### Wildcard Pattern Matching
 
-- **Flexible Monitoring** - Choose what to monitor and log
-- **Command Blacklisting** - Exclude sensitive commands from logs
-- **Time Formatting** - Customizable timestamp formats
-- **Debug Mode** - Verbose logging for troubleshooting
+The custom-responses system supports three matching modes:
 
-### 🔄 **Additional Features**
+1. **Exact Match** - `ban` matches `/ban`
+2. **Prefix Match** - `lp user` matches `/lp user Steve permission set fly`
+3. **Wildcard Match** - `lp user * permission set *` where `*` matches any single argument
 
-- **Auto-Update Checker** - Get notified of new releases
-- **File Logging** - Local log files with rotation
-- **Tab Completion** - User-friendly command interface
-- **Reload Support** - Update configuration without restart
+Pattern matching is evaluated in order: exact > wildcard > prefix for specificity.
 
-## 📦 Installation
+### Bypass Permissions
 
-1. **Download** the latest release from the [Releases Page](https://github.com/tejaslamba2006/AdminWatchdog/releases)
-2. **Place** the JAR file in your server's `plugins` folder
-3. **Restart** your server
-4. **Configure** the plugin by editing `plugins/AdminWatchdog/config.yml`
-5. **Set up** your Discord webhook URL
-6. **Reload** the plugin with `/adminwatchdog reload`
+Players with bypass permissions are excluded from monitoring:
 
-## 🔧 Configuration
+| Permission | Scope |
+|------------|-------|
+| `adminwatchdog.bypass.commands` | Command logging |
+| `adminwatchdog.bypass.creative` | Creative inventory |
+| `adminwatchdog.bypass.customresponses` | Custom response triggers |
+| `adminwatchdog.bypass.gamemode` | Gamemode change logging |
 
-### Basic Setup
+## Installation
+
+```bash
+# Download JAR from releases
+wget https://github.com/tejaslamba2006/AdminWatchdog/releases/latest/download/AdminWatchdog.jar
+
+# Deploy to plugins directory
+mv AdminWatchdog.jar /path/to/server/plugins/
+
+# Restart server to generate config
+```
+
+## Configuration
+
+### config.yml
 
 ```yaml
-# Discord Integration
 discord:
-  webhook-url: "YOUR_DISCORD_WEBHOOK_URL_HERE"
+  webhook-url: "https://discord.com/api/webhooks/..."
   enabled: true
   embeds:
     enabled: true
     creative-inventory: true
     color: "#00d4aa"
-```
 
-### Custom Command Responses
-
-Configure specific alerts for important commands:
-
-```yaml
+# Pattern-based command responses
+# Supports wildcards: * matches any single argument
 custom-responses:
   enabled: true
-  ban: "⚠️ **ADMIN ACTION** - %player% banned someone at %time%"
-  op: "🔐 **CRITICAL** - %player% used OP command! <@&ROLE_ID> at %time%"
-  gamemode: "🎮 **GAMEMODE** - %player% changed gamemode at %time%"
-```
+  # Basic command matching
+  ban: "ADMIN ACTION - %player% used ban at %time%"
+  op: "CRITICAL - %player% used OP command! <@&ROLE_ID> at %time%"
+  
+  # Subcommand matching
+  "lp user": "LUCKPERMS - %player% modified user at %time%"
+  
+  # Wildcard patterns
+  "lp user * permission set *": "PERMISSION GRANT - %player%: %command% at %time%"
+  "lp user * parent add *": "RANK CHANGE - %player%: %command% at %time%"
 
-### Monitoring Settings
-
-```yaml
 monitoring:
-  ops: true                    # Monitor operators
-  console: true               # Monitor console commands
-  gamemode-changes: true     # Monitor gamemode switches
+  ops: true
+  console: true
+  gamemode-changes: true
+  permissions:
+    enabled: true
+    list:
+      - "adminwatchdog.monitor"
+      - "minecraft.command.*"
   creative-inventory:
     enabled: true
+    ops-only: false
+    permissions-only: false
     detailed-logging: true
+  command-blacklist:
+    enabled: true
+    commands:
+      - "login"
+      - "register"
+      - "password"
 ```
 
-## 🎯 Custom Command Responses
+### Placeholder Reference
 
-One of AdminWatchdog's most powerful features is the ability to configure custom Discord messages for specific commands:
+| Placeholder | Context | Description |
+|-------------|---------|-------------|
+| `%player%` | Player commands | Player name |
+| `%sender%` | Console commands | Sender name |
+| `%command%` | All | Full command string |
+| `%time%` | All | Formatted timestamp |
 
-### Available Placeholders
-
-- `%player%` - The player who executed the command (for player commands)
-- `%sender%` - The sender who executed the command (for console commands)
-- `%command%` - The full command that was executed  
-- `%time%` - Formatted timestamp
-
-### Discord Mentions
-
-- `<@USER_ID>` - Mention a specific user
-- `<@&ROLE_ID>` - Mention a specific role
-- `@everyone` - Mention everyone
-
-### Example Configurations
-
-```yaml
-custom-responses:
-  enabled: true
-  
-  # Critical Commands (Player)
-  op: "🔐 **CRITICAL** - %player% gave OP to someone! <@&123456789> %time%"
-  deop: "🔐 **CRITICAL** - %player% removed OP from someone! <@&123456789> %time%"
-  
-  # Critical Commands (Console)
-  "/stop": "🛑 **SERVER SHUTDOWN** - Console is stopping the server! <@&123456789> %time%"
-  "/reload": "🔄 **SERVER RELOAD** - %sender% reloaded server at %time%"
-  
-  # Moderation Commands  
-  ban: "⚠️ **BAN** - %player% banned a player at %time%"
-  kick: "⚠️ **KICK** - %player% kicked a player at %time%"
-  
-  # World Management
-  gamemode: "🎮 **GAMEMODE** - %player% changed gamemode at %time%"
-  tp: "🌐 **TELEPORT** - %player% teleported at %time%"
-  
-  # Item Management
-  give: "🎁 **GIVE** - %player% gave items to someone at %time%"
-```
-
-## 📋 Commands
+## Commands
 
 | Command | Permission | Description |
 |---------|------------|-------------|
-| `/adminwatchdog` | `adminwatchdog.use` | Show plugin information |
-| `/adminwatchdog version` | `adminwatchdog.use` | Display plugin version |
-| `/adminwatchdog reload` | `adminwatchdog.reload` | Reload configuration |
-| `/adminwatchdog update` | `adminwatchdog.update.check` | Check for updates |
+| `/adminwatchdog version` | `adminwatchdog.use` | Display version info |
+| `/adminwatchdog reload` | `adminwatchdog.reload` | Hot-reload configuration |
+| `/adminwatchdog update` | `adminwatchdog.update.check` | Query GitHub API for updates |
 
-## 🔑 Permissions
+Aliases: `aw`, `awdog`
 
-| Permission | Description | Default |
-|------------|-------------|---------|
-| `adminwatchdog.use` | Basic plugin access | `true` |
-| `adminwatchdog.reload` | Reload configuration | `op` |
-| `adminwatchdog.update.check` | Check for updates | `op` |
-| `adminwatchdog.update.notify` | Receive update notifications | `op` |
-| `adminwatchdog.monitor` | Be monitored by the plugin | `false` |
+## Permissions
 
-## 🛠️ Development
+| Permission | Default | Description |
+|------------|---------|-------------|
+| `adminwatchdog.use` | true | Base command access |
+| `adminwatchdog.reload` | op | Configuration reload |
+| `adminwatchdog.monitor` | op | Subject to monitoring |
+| `adminwatchdog.update.check` | op | Manual update checks |
+| `adminwatchdog.update.notify` | op | Update notifications |
+| `adminwatchdog.bypass.*` | false | All bypass permissions |
+| `adminwatchdog.bypass.commands` | false | Bypass command monitoring |
+| `adminwatchdog.bypass.creative` | false | Bypass creative monitoring |
+| `adminwatchdog.bypass.customresponses` | false | Bypass custom responses |
+| `adminwatchdog.bypass.gamemode` | false | Bypass gamemode monitoring |
 
-### Building from Source
+## Building from Source
+
+### Requirements
+
+- JDK 21+
+- Gradle 8.x+
+- Paper API 1.20.1+
+
+### Build
 
 ```bash
 git clone https://github.com/tejaslamba2006/AdminWatchdog.git
 cd AdminWatchdog
-./gradlew build
+gradle build
+# Output: build/libs/AdminWatchdog.jar
 ```
 
-### Requirements
+### Dependencies
 
-- Java 17 or higher
-- Minecraft 1.20+
-- Paper/Spigot server
+```gradle
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    // Guava provided by Paper runtime
+}
+```
 
-**⚠️ Note:** The source code is provided for reference only. Modification, redistribution, or reuse is prohibited under the license terms.
+## Performance Notes
 
-## 🤝 Contributing
+- File logging uses `CompletableFuture.runAsync()` to avoid blocking the main thread
+- Discord webhooks dispatch asynchronously
+- Item metadata cached with Guava `Cache<Material, ItemData>` (512 entries, 30-min TTL)
+- Pattern matching uses compiled regex with caching for repeated evaluations
 
-**Important:** This project uses a proprietary license that restricts code modifications and reuse.
+## Contributing
 
-### How to Contribute
+This project uses a proprietary license. Code contributions are not accepted.
 
-- 🐛 **Report Bugs** - [Open an issue](https://github.com/tejaslamba2006/AdminWatchdog/issues) describing the problem
-- 💡 **Suggest Features** - [Request new features](https://github.com/tejaslamba2006/AdminWatchdog/issues) with detailed descriptions
-- 📖 **Improve Documentation** - Suggest documentation improvements via issues
-- 🧪 **Test Beta Versions** - Help test pre-release versions
+**Accepted contributions:**
 
-### ⚠️ Contribution Restrictions
+- Bug reports via GitHub Issues
+- Feature requests with detailed use cases
+- Documentation improvements via issues
 
-- ❌ **No code pull requests** - Source code modifications are not accepted
-- ❌ **No forks for modification** - Creating derivative works is prohibited  
-- ❌ **No code suggestions** - Direct code contributions cannot be merged
-- ✅ **Ideas and feedback welcome** - Conceptual suggestions are appreciated
+**Not accepted:**
 
-For special licensing arrangements or partnership opportunities, please [contact me directly](https://github.com/TejasLamba2006).
+- Pull requests with code changes
+- Forks intended for redistribution
 
-## 💡 Feature Requests
+For licensing inquiries: [contact](https://github.com/TejasLamba2006)
 
-Have an idea for AdminWatchdog? [Open an issue](https://github.com/tejaslamba2006/AdminWatchdog/issues) with the `enhancement` label!
+## Support
 
-## 📞 Support
+1. Check existing [Issues](https://github.com/tejaslamba2006/AdminWatchdog/issues)
+2. Join [Discord](https://discord.gg/msEkYDWpXM)
+3. Open a new issue with reproduction steps
 
-Need help? Here's how to get support:
+## License
 
-1. 📖 Check the [Documentation](#-features)
-2. 🔍 Search [Existing Issues](https://github.com/tejaslamba2006/AdminWatchdog/issues)
-3. 💬 Join our [Discord Server](https://discord.gg/msEkYDWpXM)
-4. 🐛 [Create a New Issue](https://github.com/tejaslamba2006/AdminWatchdog/issues/new)
+Proprietary - see [LICENSE](LICENSE)
 
-## 📄 License
-
-This project is licensed under a **Proprietary License** - see the [LICENSE](LICENSE) file for details.
-
-### ⚠️ Important License Notes
-
-- ❌ **Source code cannot be copied, modified, or reused**
-- ❌ **No derivative works or modifications allowed**  
-- ❌ **Reverse engineering is prohibited**
-- ✅ **Commercial use of compiled plugin is allowed**
-- ✅ **Distribution of original compiled plugin is permitted**
-- ⚖️ **All rights reserved by TejasLamba2006**
-
-For licensing inquiries or special permissions, please [contact me](https://github.com/TejasLamba2006).
-
-## ⭐ Show Your Support
-
-If you found this plugin helpful, please consider:
-
-- ⭐ **Starring** this repository
-- 🍴 **Forking** for your own modifications
-- 📢 **Sharing** with other server administrators
-- ☕ **[Sponsoring on GitHub](https://github.com/sponsors/TejasLamba2006)** to support development
-
-## 🙏 Acknowledgments
-
-- Thanks to the Minecraft modding community
-- Discord for their excellent webhook API
-- All contributors and users who provide feedback
+- Source code viewing permitted
+- Modification, redistribution, derivative works prohibited
+- Commercial use of compiled plugin permitted
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for the Minecraft community**
-
-[⬆ Back to Top](#️-adminwatchdog)
+[GitHub](https://github.com/TejasLamba2006/AdminWatchdog) | [Modrinth](https://modrinth.com/plugin/adminwatchdog) | [Discord](https://discord.gg/msEkYDWpXM)
 
 </div>

@@ -1,5 +1,6 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -8,8 +9,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class ConfigManager {
 
@@ -42,14 +46,14 @@ public class ConfigManager {
 
         if (currentVersion < CURRENT_CONFIG_VERSION) {
             plugin.getLogger().info("Updating config from version " + currentVersion + " to " + CURRENT_CONFIG_VERSION);
-            updateConfig(currentVersion);
+            updateConfig();
         } else if (currentVersion > CURRENT_CONFIG_VERSION) {
             plugin.getLogger().warning("Config version (" + currentVersion + ") is newer than plugin version ("
                     + CURRENT_CONFIG_VERSION + "). Some features may not work correctly.");
         }
     }
 
-    private void updateConfig(int oldVersion) {
+    private void updateConfig() {
         try {
             FileConfiguration currentConfig = plugin.getConfig();
 
@@ -159,6 +163,18 @@ public class ConfigManager {
         return plugin.getConfig().getBoolean("monitoring.creative-inventory.detailed-logging", true);
     }
 
+    public boolean isCreativeItemDropMonitoringEnabled() {
+        return plugin.getConfig().getBoolean("monitoring.creative-item-drops.enabled", true);
+    }
+
+    public boolean isCreativeItemDropTrackPickup() {
+        return plugin.getConfig().getBoolean("monitoring.creative-item-drops.track-pickup", true);
+    }
+
+    public int getCreativeItemDropTrackingDuration() {
+        return plugin.getConfig().getInt("monitoring.creative-item-drops.tracking-duration", 300);
+    }
+
     public boolean isAllCommandsMonitoringEnabled() {
         return plugin.getConfig().getBoolean("monitoring.all-commands", false);
     }
@@ -240,12 +256,106 @@ public class ConfigManager {
     }
 
     public boolean hasCustomCommandResponse(String command) {
-        return plugin.getConfig().contains("custom-responses." + command.toLowerCase().replace("/", ""));
+        return findMatchingCustomResponse(command) != null;
     }
 
     public String getCustomCommandResponse(String command) {
-        String cleanCommand = command.toLowerCase().replace("/", "");
-        return plugin.getConfig().getString("custom-responses." + cleanCommand, "");
+        Map.Entry<String, String> match = findMatchingCustomResponse(command);
+        return match != null ? match.getValue() : "";
+    }
+
+    /**
+     * Finds a matching custom response for a command, supporting wildcards.
+     * Patterns can use:
+     * - Simple command: "lp" matches "/lp" only
+     * - Command with subcommand: "lp user" matches "/lp user ..."
+     * - Wildcards: "lp user * permission set *" where * matches any single argument
+     * 
+     * @param command The full command (e.g., "/lp user Steve permission set *")
+     * @return Map entry with pattern key and response value, or null if no match
+     */
+    public Map.Entry<String, String> findMatchingCustomResponse(String command) {
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("custom-responses");
+        if (section == null) {
+            return null;
+        }
+
+        String cleanCommand = command.toLowerCase().replaceFirst("^/", "");
+
+        // Get all keys except 'enabled'
+        Set<String> keys = section.getKeys(false);
+
+        // First, try exact match (most specific)
+        for (String key : keys) {
+            if (key.equalsIgnoreCase("enabled"))
+                continue;
+
+            String pattern = key.toLowerCase();
+            if (cleanCommand.equals(pattern) || cleanCommand.startsWith(pattern + " ")) {
+                String response = section.getString(key, "");
+                if (!response.isEmpty()) {
+                    return new AbstractMap.SimpleEntry<>(key, response);
+                }
+            }
+        }
+
+        // Then try wildcard patterns (less specific)
+        for (String key : keys) {
+            if (key.equalsIgnoreCase("enabled"))
+                continue;
+
+            if (key.contains("*")) {
+                if (matchesWildcardPattern(cleanCommand, key.toLowerCase())) {
+                    String response = section.getString(key, "");
+                    if (!response.isEmpty()) {
+                        return new AbstractMap.SimpleEntry<>(key, response);
+                    }
+                }
+            }
+        }
+
+        // Finally try prefix match for backward compatibility
+        String baseCommand = cleanCommand.split(" ")[0];
+        for (String key : keys) {
+            if (key.equalsIgnoreCase("enabled"))
+                continue;
+
+            if (key.equalsIgnoreCase(baseCommand)) {
+                String response = section.getString(key, "");
+                if (!response.isEmpty()) {
+                    return new AbstractMap.SimpleEntry<>(key, response);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Matches a command against a wildcard pattern.
+     * Pattern: "lp user * permission set *"
+     * Command: "lp user Steve permission set essentials.fly"
+     * 
+     * @param command The actual command (without leading /)
+     * @param pattern The pattern with * wildcards
+     * @return true if the command matches the pattern
+     */
+    private boolean matchesWildcardPattern(String command, String pattern) {
+        // Convert wildcard pattern to regex
+        // Escape special regex characters, then replace * with regex for "any word"
+        String regex = Pattern.quote(pattern)
+                .replace("\\*", "\\E[^\\s]+\\Q") // * matches one argument (non-whitespace)
+                .replaceAll("\\\\Q\\\\E", ""); // Clean up empty quotes
+
+        // Allow the command to have more arguments after the pattern
+        regex = "^" + regex + "($|\\s.*)";
+
+        try {
+            return Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(command).matches();
+        } catch (Exception e) {
+            // Invalid pattern, fall back to simple prefix match
+            return command.startsWith(pattern.replace("*", "").trim());
+        }
     }
 
     public boolean isCustomCommandResponsesEnabled() {

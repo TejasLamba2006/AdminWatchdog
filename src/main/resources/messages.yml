@@ -23,6 +23,8 @@ logging:
   permission-command: "[%time%] [PERM] %player%: %command%"
   creative-inventory: "[%time%] %prefix%%player%: took %amount%x %item% from creative inventory"
   creative-inventory-detailed: "[%time%] %prefix%%player%: took %amount%x %item% (%material%) from creative inventory"
+  creative-item-drop: "[%time%] %player%: dropped %amount%x %item% (%material%) from creative mode"
+  creative-item-pickup: "[%time%] %picker%: picked up %amount%x %item% (%material%) originally dropped by %dropper%"
 
 # Discord webhook messages
 discord:
@@ -32,6 +34,8 @@ discord:
   permission-command: "🔑 **%player%** (with permission) executed: `%command%`"
   creative-inventory: "🎨 **%player%** took **%amount%x %item%** from creative inventory"
   creative-inventory-detailed: "🎨 **%player%** took **%amount%x %item%** (%material%) from creative inventory"
+  creative-item-drop: "📦 **%player%** dropped **%amount%x %item%** from creative mode"
+  creative-item-pickup: "⚠️ **%picker%** picked up **%amount%x %item%** (originally dropped by **%dropper%**)"
   update-available: "🔄 **AdminWatchdog Update Available!** Current: %current% → Latest: %latest% | Download: %download%"
 
 # Update checker messages

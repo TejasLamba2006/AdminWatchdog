@@ -1,5 +1,8 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemStack;
+
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -7,12 +10,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.concurrent.CompletableFuture;
-
-import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.inventory.ItemStack;
+import java.util.stream.Collectors;
 
 public final class DiscordManager {
 
@@ -28,45 +27,48 @@ public final class DiscordManager {
 
     public DiscordManager(AdminWatchdog plugin) {
         this.plugin = plugin;
-        this.apiHelper = new MinecraftApiHelper(plugin);
+        this.apiHelper = new MinecraftApiHelper();
     }
 
     public void sendToDiscord(String message) {
-        if (!plugin.getConfigManager().isDiscordEnabled()) {
-            return;
-        }
+        CompletableFuture.runAsync(() -> {
+            if (!plugin.getConfigManager().isDiscordEnabled())
+                return;
 
-        String webhookUrl = plugin.getConfigManager().getWebhookUrl();
-        if (webhookUrl == null || webhookUrl.isEmpty()) {
-            plugin.getLogger().warning(plugin.getConfigManager().getMessage("errors.webhook-not-set"));
-            return;
-        }
-
-        try {
-            URL url = URI.create(webhookUrl).toURL();
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-            connection.setRequestMethod("POST");
-            connection.setDoOutput(true);
-            connection.setRequestProperty("Content-Type", "application/json");
-
-            String jsonPayload = String.format("{\"content\": \"%s\"}", safeJsonString(message));
-
-            try (OutputStream os = connection.getOutputStream()) {
-                os.write(jsonPayload.getBytes());
-                os.flush();
+            String webhookUrl = plugin.getConfigManager().getWebhookUrl();
+            if (webhookUrl == null || webhookUrl.isEmpty()) {
+                plugin.getLogger().warning(plugin.getConfigManager().getMessage("errors.webhook-not-set"));
+                return;
             }
 
-            int responseCode = connection.getResponseCode();
-            if (responseCode != 204) {
-                String errorMessage = plugin.getConfigManager().getMessage("errors.webhook-failed", "%code%",
-                        String.valueOf(responseCode));
-                plugin.getLogger().warning(errorMessage);
-            }
+            try {
+                URL url = URI.create(webhookUrl).toURL();
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+                connection.setRequestMethod("POST");
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json");
+
+                String jsonPayload = String.format("{\"content\": \"%s\"}", safeJsonString(message));
+
+                try (OutputStream os = connection.getOutputStream()) {
+                    os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));
+                    os.flush();
+                }
+
+                int responseCode = connection.getResponseCode();
+                if (responseCode != 204) {
+                    String errorMessage = plugin.getConfigManager().getMessage("errors.webhook-failed", "%code%",
+                            String.valueOf(responseCode));
+                    plugin.getLogger().warning(errorMessage);
+                }
+
+            } catch (Exception e) {
+                if (plugin.getConfigManager().isDebugEnabled()) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     public void sendGamemodeChange(String playerName, String oldMode, String newMode) {
@@ -95,6 +97,7 @@ public final class DiscordManager {
                 PLAYER_PLACEHOLDER, playerName,
                 COMMAND_PLACEHOLDER, command,
                 TIME_PLACEHOLDER, time);
+
         sendToDiscord(message);
     }
 
@@ -103,8 +106,8 @@ public final class DiscordManager {
             return;
         }
 
-        if (plugin.getConfigManager().isDiscordEmbedsEnabled() &&
-                plugin.getConfigManager().isCreativeInventoryEmbedsEnabled()) {
+        if (plugin.getConfigManager().isDiscordEmbedsEnabled()
+                && plugin.getConfigManager().isCreativeInventoryEmbedsEnabled()) {
             sendCreativeInventoryEmbed(playerName, item);
         } else {
             sendCreativeInventorySimple(playerName, item);
@@ -114,7 +117,7 @@ public final class DiscordManager {
     private void sendCreativeInventoryEmbed(String playerName, ItemStack item) {
         CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(item);
 
-        itemDataFuture.thenAccept(itemData -> {
+        itemDataFuture.thenAcceptAsync(itemData -> {
             try {
                 String embedJson = createCreativeInventoryEmbed(playerName, item, itemData);
                 sendJsonToDiscord(embedJson);
@@ -171,11 +174,11 @@ public final class DiscordManager {
         embedJson.append("{\"embeds\":[{");
         embedJson.append("\"title\":\"🎨 Creative Inventory Action\",");
         embedJson.append("\"color\":").append(colorInt).append(",");
-        embedJson.append("\"thumbnail\":{\"url\":\"").append(safeJsonString(itemData.imageUrl)).append("\"},");
+        embedJson.append("\"thumbnail\":{\"url\":\"").append(safeJsonString(itemData.imageUrl())).append("\"},");
         embedJson.append("\"fields\":[");
         embedJson.append("{\"name\":\"Player\",\"value\":\"**").append(safeJsonString(playerName))
                 .append("**\",\"inline\":true},");
-        embedJson.append("{\"name\":\"Item\",\"value\":\"**").append(safeJsonString(itemData.name))
+        embedJson.append("{\"name\":\"Item\",\"value\":\"**").append(safeJsonString(itemData.name()))
                 .append("**\",\"inline\":true},");
         embedJson.append("{\"name\":\"Amount\",\"value\":\"**").append(amount).append("**\",\"inline\":true}");
 
@@ -367,5 +370,175 @@ public final class DiscordManager {
         }
 
         return escaped;
+    }
+
+    // ==================== Creative Item Drop/Pickup Methods ====================
+
+    public void sendCreativeItemDrop(String playerName, ItemStack item) {
+        if (!plugin.getConfigManager().isDiscordEnabled()) {
+            return;
+        }
+
+        if (plugin.getConfigManager().isDiscordEmbedsEnabled()) {
+            sendCreativeItemDropEmbed(playerName, item);
+        } else {
+            sendCreativeItemDropSimple(playerName, item);
+        }
+    }
+
+    private void sendCreativeItemDropSimple(String playerName, ItemStack item) {
+        String time = plugin.getConfigManager().getFormattedTime();
+        String itemName = getItemDisplayName(item);
+        int amount = item.getAmount();
+
+        String message = plugin.getConfigManager().getMessage("discord.creative-item-drop",
+                PLAYER_PLACEHOLDER, playerName,
+                "%amount%", String.valueOf(amount),
+                "%item%", itemName,
+                "%material%", item.getType().name(),
+                TIME_PLACEHOLDER, time);
+        sendToDiscord(message);
+    }
+
+    private void sendCreativeItemDropEmbed(String playerName, ItemStack item) {
+        CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(item);
+
+        itemDataFuture.thenAcceptAsync(itemData -> {
+            try {
+                String embedJson = createCreativeItemDropEmbed(playerName, item, itemData);
+                sendJsonToDiscord(embedJson);
+            } catch (Exception e) {
+                if (plugin.getConfigManager().isFallbackToSimple()) {
+                    sendCreativeItemDropSimple(playerName, item);
+                }
+            }
+        }).exceptionally(ex -> {
+            if (plugin.getConfigManager().isFallbackToSimple()) {
+                sendCreativeItemDropSimple(playerName, item);
+            }
+            return null;
+        });
+    }
+
+    private String createCreativeItemDropEmbed(String playerName, ItemStack item,
+            MinecraftApiHelper.ItemData itemData) {
+        String time = plugin.getConfigManager().getFormattedTime();
+        int amount = item.getAmount();
+        String embedColor = plugin.getConfigManager().getEmbedColor().replace("#", "");
+
+        int colorInt;
+        try {
+            colorInt = Integer.parseInt(embedColor, 16);
+        } catch (NumberFormatException e) {
+            colorInt = 0x00d4aa;
+        }
+
+        StringBuilder embedJson = new StringBuilder();
+        embedJson.append("{\"embeds\":[{");
+        embedJson.append("\"title\":\"📦 Creative Item Dropped\",");
+        embedJson.append("\"color\":").append(colorInt).append(",");
+        embedJson.append("\"thumbnail\":{\"url\":\"").append(safeJsonString(itemData.imageUrl())).append("\"},");
+        embedJson.append("\"fields\":[");
+        embedJson.append("{\"name\":\"Dropped By\",\"value\":\"**").append(safeJsonString(playerName))
+                .append("**\",\"inline\":true},");
+        embedJson.append("{\"name\":\"Item\",\"value\":\"**").append(safeJsonString(itemData.name()))
+                .append("**\",\"inline\":true},");
+        embedJson.append("{\"name\":\"Amount\",\"value\":\"**").append(amount).append("**\",\"inline\":true}");
+
+        if (plugin.getConfigManager().isIncludeTechnicalDetails()) {
+            embedJson.append(",{\"name\":\"Material ID\",\"value\":\"`").append(item.getType().name())
+                    .append("`\",\"inline\":true}");
+        }
+
+        embedJson.append("],");
+        embedJson.append("\"footer\":{\"text\":\"").append(time);
+        embedJson.append(" • AdminWatchdog Plugin");
+        embedJson.append("\"}");
+        embedJson.append("}]}");
+
+        return embedJson.toString();
+    }
+
+    public void sendCreativeItemPickup(String pickerName, String dropperName, ItemStack item) {
+        if (!plugin.getConfigManager().isDiscordEnabled()) {
+            return;
+        }
+
+        if (plugin.getConfigManager().isDiscordEmbedsEnabled()) {
+            sendCreativeItemPickupEmbed(pickerName, dropperName, item);
+        } else {
+            sendCreativeItemPickupSimple(pickerName, dropperName, item);
+        }
+    }
+
+    private void sendCreativeItemPickupSimple(String pickerName, String dropperName, ItemStack item) {
+        String time = plugin.getConfigManager().getFormattedTime();
+        String itemName = getItemDisplayName(item);
+        int amount = item.getAmount();
+
+        String message = plugin.getConfigManager().getMessage("discord.creative-item-pickup",
+                "%picker%", pickerName,
+                "%dropper%", dropperName,
+                "%amount%", String.valueOf(amount),
+                "%item%", itemName,
+                "%material%", item.getType().name(),
+                TIME_PLACEHOLDER, time);
+        sendToDiscord(message);
+    }
+
+    private void sendCreativeItemPickupEmbed(String pickerName, String dropperName, ItemStack item) {
+        CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(item);
+
+        itemDataFuture.thenAcceptAsync(itemData -> {
+            try {
+                String embedJson = createCreativeItemPickupEmbed(pickerName, dropperName, item, itemData);
+                sendJsonToDiscord(embedJson);
+            } catch (Exception e) {
+                if (plugin.getConfigManager().isFallbackToSimple()) {
+                    sendCreativeItemPickupSimple(pickerName, dropperName, item);
+                }
+            }
+        }).exceptionally(ex -> {
+            if (plugin.getConfigManager().isFallbackToSimple()) {
+                sendCreativeItemPickupSimple(pickerName, dropperName, item);
+            }
+            return null;
+        });
+    }
+
+    private String createCreativeItemPickupEmbed(String pickerName, String dropperName, ItemStack item,
+            MinecraftApiHelper.ItemData itemData) {
+        String time = plugin.getConfigManager().getFormattedTime();
+        int amount = item.getAmount();
+
+        // Use orange/warning color for pickups
+        int colorInt = 0xFF9800;
+
+        StringBuilder embedJson = new StringBuilder();
+        embedJson.append("{\"embeds\":[{");
+        embedJson.append("\"title\":\"⚠️ Creative Item Picked Up\",");
+        embedJson.append("\"color\":").append(colorInt).append(",");
+        embedJson.append("\"thumbnail\":{\"url\":\"").append(safeJsonString(itemData.imageUrl())).append("\"},");
+        embedJson.append("\"fields\":[");
+        embedJson.append("{\"name\":\"Picked Up By\",\"value\":\"**").append(safeJsonString(pickerName))
+                .append("**\",\"inline\":true},");
+        embedJson.append("{\"name\":\"Originally Dropped By\",\"value\":\"**").append(safeJsonString(dropperName))
+                .append("**\",\"inline\":true},");
+        embedJson.append("{\"name\":\"Item\",\"value\":\"**").append(safeJsonString(itemData.name()))
+                .append("**\",\"inline\":true},");
+        embedJson.append("{\"name\":\"Amount\",\"value\":\"**").append(amount).append("**\",\"inline\":true}");
+
+        if (plugin.getConfigManager().isIncludeTechnicalDetails()) {
+            embedJson.append(",{\"name\":\"Material ID\",\"value\":\"`").append(item.getType().name())
+                    .append("`\",\"inline\":true}");
+        }
+
+        embedJson.append("],");
+        embedJson.append("\"footer\":{\"text\":\"").append(time);
+        embedJson.append(" • AdminWatchdog Plugin");
+        embedJson.append("\"}");
+        embedJson.append("}]}");
+
+        return embedJson.toString();
     }
 }

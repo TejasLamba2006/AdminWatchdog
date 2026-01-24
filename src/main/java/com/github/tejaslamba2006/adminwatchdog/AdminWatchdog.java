@@ -1,14 +1,19 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import org.bstats.bukkit.Metrics;
+import org.bstats.charts.SimplePie;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class AdminWatchdog extends JavaPlugin {
 
     private static final String COMMAND_NAME = "adminwatchdog";
+    private static final int BSTATS_PLUGIN_ID = 29010;
+
     private static AdminWatchdog instance;
     private DiscordManager discordManager;
     private ConfigManager configManager;
     private UpdateChecker updateChecker;
+    private Metrics metrics;
 
     @Override
     public void onEnable() {
@@ -35,6 +40,9 @@ public final class AdminWatchdog extends JavaPlugin {
                 updateChecker.startUpdateChecker();
             }
 
+            // Initialize bStats metrics
+            initializeMetrics();
+
             if (configManager != null) {
                 getLogger().info(configManager.getMessage("plugin.enabled"));
             }
@@ -43,6 +51,26 @@ public final class AdminWatchdog extends JavaPlugin {
             e.printStackTrace();
             getServer().getPluginManager().disablePlugin(this);
         }
+    }
+
+    private void initializeMetrics() {
+        metrics = new Metrics(this, BSTATS_PLUGIN_ID);
+
+        // Discord enabled chart
+        metrics.addCustomChart(
+                new SimplePie("discord_enabled", () -> configManager.isDiscordEnabled() ? "Enabled" : "Disabled"));
+
+        // Creative inventory monitoring chart
+        metrics.addCustomChart(new SimplePie("creative_monitoring",
+                () -> configManager.isCreativeInventoryMonitoringEnabled() ? "Enabled" : "Disabled"));
+
+        // Custom responses chart
+        metrics.addCustomChart(new SimplePie("custom_responses",
+                () -> configManager.isCustomCommandResponsesEnabled() ? "Enabled" : "Disabled"));
+
+        // Item drop tracking chart
+        metrics.addCustomChart(new SimplePie("item_drop_tracking",
+                () -> configManager.isCreativeItemDropMonitoringEnabled() ? "Enabled" : "Disabled"));
     }
 
     @Override

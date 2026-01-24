@@ -1,7 +1,7 @@
 name: AdminWatchdog
-version: "1.0"
+version: "1.2"
 main: com.github.tejaslamba2006.adminwatchdog.AdminWatchdog
-api-version: "1.20"
+api-version: "1.21"
 
 commands:
   adminwatchdog:
@@ -34,3 +34,28 @@ permissions:
   adminwatchdog.update.notify:
     description: "Receive update notifications when available"
     default: op
+
+  adminwatchdog.bypass.*:
+    description: "All bypass permissions"
+    children:
+      adminwatchdog.bypass.commands: true
+      adminwatchdog.bypass.creative: true
+      adminwatchdog.bypass.customresponses: true
+      adminwatchdog.bypass.gamemode: true
+    default: false
+
+  adminwatchdog.bypass.commands:
+    description: "Bypass command monitoring"
+    default: false
+
+  adminwatchdog.bypass.creative:
+    description: "Bypass creative inventory monitoring"
+    default: false
+
+  adminwatchdog.bypass.customresponses:
+    description: "Bypass custom response triggers"
+    default: false
+
+  adminwatchdog.bypass.gamemode:
+    description: "Bypass gamemode change monitoring"
+    default: false

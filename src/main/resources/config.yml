@@ -22,16 +22,29 @@ discord:
 # Custom Command Responses
 # When specific commands are run, send custom messages to Discord
 # Works for both player and console commands
+# NOW RESPECTS MONITORING PERMISSIONS - only triggers for monitored players!
 custom-responses:
   enabled: true
-  # Examples: (remove the # to enable)
+  #
+  # BASIC EXAMPLES (matches base command):
   # ban: "⚠️ **ADMIN ACTION** - %player% used ban command at %time%"
   # kick: "⚠️ **ADMIN ACTION** - %player% used kick command at %time%"
   # op: "🔐 **CRITICAL** - %player% used OP command! <@&ROLE_ID_HERE> at %time%"
   # gamemode: "🎮 **GAMEMODE** - %player% changed gamemode at %time%"
+  #
+  # ADVANCED EXAMPLES (matches specific subcommands):
+  # "lp user": "⚠️ **LUCKPERMS** - %player% modified a user at %time%"
+  # "lp group": "⚠️ **LUCKPERMS** - %player% modified a group at %time%"
+  #
+  # WILDCARD EXAMPLES (* matches any single argument):
+  # "lp user * permission set *": "🔐 **CRITICAL** - %player% set permission with: %command% at %time%"
+  # "lp user * parent add *": "⚠️ **RANK CHANGE** - %player% added rank: %command% at %time%"
+  # "ban * *": "🔨 **BAN** - %player% banned someone: %command% at %time%"
+  #
   # For console commands, use %sender% instead of %player%:
   # "/stop": "🛑 **SERVER SHUTDOWN** - Console is stopping the server at %time%! <@&ADMIN_ROLE_ID>"
   # "/reload": "🔄 **SERVER RELOAD** - %sender% reloaded server at %time%"
+  #
   # Available placeholders: %player%, %sender%, %command%, %time%
   # You can use Discord mentions like <@USER_ID>, <@&ROLE_ID>, or @everyone
 
@@ -66,10 +79,21 @@ monitoring:
     # Log item details (name, amount, enchantments)
     detailed-logging: true
 
+  # Monitor items dropped by creative mode players
+  # Tracks when admins drop items from creative and who picks them up
+  # Useful for catching item duping/spawning for other players
+  creative-item-drops:
+    enabled: false
+    # Track who picks up items dropped by creative mode players
+    track-pickup: true
+    # How long (in seconds) to track dropped items before forgetting them
+    # Default: 300 seconds (5 minutes)
+    tracking-duration: 300
+
   # Monitor all commands (not just ops/permission holders)
   all-commands: false
 
-  # Blacklist certain commands from being logged
+  # Command blacklist - these commands will never be logged
   command-blacklist:
     enabled: true
     commands:
@@ -77,6 +101,15 @@ monitoring:
       - "register"
       - "password"
       - "2fa"
+
+# Bypass Permissions
+# Players with these permissions will NOT be monitored
+# Give to trusted admins who don't need to be watched
+bypass:
+  # adminwatchdog.bypass.commands - bypass command logging
+  # adminwatchdog.bypass.creative - bypass creative inventory logging
+  # adminwatchdog.bypass.customresponses - bypass custom response triggers
+  # adminwatchdog.bypass.gamemode - bypass gamemode change logging
 
 # Logging Settings
 logging:

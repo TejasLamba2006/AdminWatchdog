@@ -1,11 +1,14 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public final class MinecraftApiHelper {
 
@@ -17,11 +20,15 @@ public final class MinecraftApiHelper {
     });
     private static final String DEFAULT_DESCRIPTION = "Item taken from creative inventory";
 
-    public MinecraftApiHelper(AdminWatchdog plugin) {
-    }
+    private static final Cache<Material, ItemData> ITEM_CACHE = CacheBuilder.newBuilder()
+            .maximumSize(512)
+            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .build();
 
-    public CompletableFuture<ItemData> getItemData(ItemStack item) {
-        return CompletableFuture.completedFuture(createItemData(item));
+    public static void shutdown() {
+        if (!executor.isShutdown())
+            executor.shutdown();
+        ITEM_CACHE.invalidateAll();
     }
 
     private ItemData createItemData(ItemStack item) {
@@ -60,25 +67,18 @@ public final class MinecraftApiHelper {
         return IMAGE_BASE_URL + "/minecraft_" + material.name().toLowerCase() + ".png";
     }
 
-    public static void shutdown() {
-        if (!executor.isShutdown()) {
-            executor.shutdown();
-        }
+    public CompletableFuture<ItemData> getItemData(ItemStack item) {
+        Material material = item.getType();
+
+        ItemData cached = ITEM_CACHE.getIfPresent(material);
+        if (cached != null)
+            return CompletableFuture.completedFuture(cached);
+
+        ItemData itemData = createItemData(item);
+        ITEM_CACHE.put(material, itemData);
+        return CompletableFuture.completedFuture(itemData);
     }
 
-    public static class ItemData {
-        public final String name;
-        public final String description;
-        public final String imageUrl;
-        public final boolean renewable;
-        public final boolean fromApi;
-
-        public ItemData(String name, String description, String imageUrl, boolean renewable, boolean fromApi) {
-            this.name = name;
-            this.description = description;
-            this.imageUrl = imageUrl;
-            this.renewable = renewable;
-            this.fromApi = fromApi;
-        }
+    public record ItemData(String name, String description, String imageUrl, boolean renewable, boolean fromApi) {
     }
 }

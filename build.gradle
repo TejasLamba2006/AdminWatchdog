@@ -1,9 +1,10 @@
 plugins {
     id 'java'
+    id 'com.gradleup.shadow' version '9.0.0-beta12'
 }
 
 group = 'com.github.tejaslamba2006'
-version = '0.5'
+version = '1.2'
 
 compileJava {
     sourceCompatibility = '21'
@@ -16,10 +17,21 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT'
+    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
     implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'org.bstats:bstats-bukkit:3.1.0'
+}
+
+shadowJar {
+    archiveFileName = 'AdminWatchdog.jar'
+    
+    relocate 'org.bstats', 'com.github.tejaslamba2006.adminwatchdog.bstats'
 }
 
 jar {
     archiveFileName = 'AdminWatchdog.jar'
+}
+
+build {
+    dependsOn shadowJar
 }
