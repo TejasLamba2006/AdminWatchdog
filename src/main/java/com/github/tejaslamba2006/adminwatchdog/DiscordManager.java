@@ -51,8 +51,8 @@ public final class DiscordManager {
 
                 // Include allowed_mentions to enable pings
                 String jsonPayload = String.format(
-                    "{\"content\":\"%s\",\"allowed_mentions\":{\"parse\":[\"users\",\"roles\",\"everyone\"]}}",
-                    safeJsonString(message));
+                        "{\"content\":\"%s\",\"allowed_mentions\":{\"parse\":[\"users\",\"roles\",\"everyone\"]}}",
+                        safeJsonString(message));
 
                 try (OutputStream os = connection.getOutputStream()) {
                     os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));

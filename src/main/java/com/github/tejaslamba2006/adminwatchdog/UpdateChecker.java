@@ -140,10 +140,10 @@ public final class UpdateChecker {
             fetchedLatestVersion = fetchedLatestVersion.substring(1);
         }
 
-
         boolean isNewer = isNewerVersion(currentVersion, fetchedLatestVersion);
 
-        return new UpdateResult(isNewer, currentVersion, fetchedLatestVersion, "https://modrinth.com/plugin/adminwatchdog", null);
+        return new UpdateResult(isNewer, currentVersion, fetchedLatestVersion,
+                "https://modrinth.com/plugin/adminwatchdog", null);
     }
 
     /**
@@ -167,7 +167,7 @@ public final class UpdateChecker {
                 }
             }
 
-            return false; 
+            return false;
         } catch (NumberFormatException e) {
             return !current.equals(latest);
         }
