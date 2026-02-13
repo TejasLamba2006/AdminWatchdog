@@ -49,7 +49,10 @@ public final class DiscordManager {
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json");
 
-                String jsonPayload = String.format("{\"content\": \"%s\"}", safeJsonString(message));
+                // Include allowed_mentions to enable pings
+                String jsonPayload = String.format(
+                    "{\"content\":\"%s\",\"allowed_mentions\":{\"parse\":[\"users\",\"roles\",\"everyone\"]}}",
+                    safeJsonString(message));
 
                 try (OutputStream os = connection.getOutputStream()) {
                     os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));
@@ -353,7 +356,6 @@ public final class DiscordManager {
                 .replace("\t", "\\t")
                 .replace("\b", "\\b")
                 .replace("\f", "\\f")
-                .replace("/", "\\/")
                 .replaceAll("[\u0000-\u001F\u007F-\u009F]", "")
                 .replaceAll("§[0-9a-fk-or]", "");
     }

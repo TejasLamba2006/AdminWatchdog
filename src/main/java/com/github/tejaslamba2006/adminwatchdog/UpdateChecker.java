@@ -46,12 +46,7 @@ public final class UpdateChecker {
 
         Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, this::checkForUpdates, STARTUP_DELAY_TICKS);
 
-        long intervalTicks = plugin.getConfigManager().getUpdateCheckInterval() * 20L * 60L;
-        updateTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::checkForUpdates, intervalTicks,
-                intervalTicks);
-
-        plugin.getLogger().info("Update checker started. Checking every "
-                + plugin.getConfigManager().getUpdateCheckInterval() + " minutes.");
+        plugin.getLogger().info("Update checker started. Will check on startup only.");
     }
 
     /**
