@@ -282,48 +282,66 @@ public class ConfigManager {
 
         String cleanCommand = command.toLowerCase().replaceFirst("^/", "");
 
-        // Get all keys except 'enabled'
-        Set<String> keys = section.getKeys(false);
+        // Get all keys except 'enabled' and sort by specificity (longer patterns first)
+        List<String> keys = section.getKeys(false).stream()
+                .filter(key -> !key.equalsIgnoreCase("enabled"))
+                .sorted((a, b) -> {
+                    // Count words in pattern (wildcards count as words)
+                    int aWords = a.split("\\s+").length;
+                    int bWords = b.split("\\s+").length;
+                    // Longer patterns (more words) come first
+                    if (aWords != bWords) {
+                        return Integer.compare(bWords, aWords);
+                    }
+                    // If same length, wildcards come before non-wildcards
+                    boolean aHasWildcard = a.contains("*");
+                    boolean bHasWildcard = b.contains("*");
+                    if (aHasWildcard != bHasWildcard) {
+                        return aHasWildcard ? -1 : 1;
+                    }
+                    return 0;
+                })
+                .toList();
 
-        // First, try exact match (most specific)
-        for (String key : keys) {
-            if (key.equalsIgnoreCase("enabled"))
-                continue;
-
-            String pattern = key.toLowerCase();
-            if (cleanCommand.equals(pattern) || cleanCommand.startsWith(pattern + " ")) {
-                String response = section.getString(key, "");
-                if (!response.isEmpty()) {
-                    return new AbstractMap.SimpleEntry<>(key, response);
-                }
-            }
+        if (plugin.getConfig().getBoolean("general.debug", false)) {
+            plugin.getLogger().info("Matching command: '" + cleanCommand + "'");
+            plugin.getLogger().info("Pattern order: " + keys);
         }
 
-        // Then try wildcard patterns (less specific)
+        // Try all patterns in order of specificity
         for (String key : keys) {
-            if (key.equalsIgnoreCase("enabled"))
-                continue;
+            String pattern = key.toLowerCase();
 
-            if (key.contains("*")) {
-                if (matchesWildcardPattern(cleanCommand, key.toLowerCase())) {
+            // Check wildcard patterns
+            if (pattern.contains("*")) {
+                boolean matches = matchesWildcardPattern(cleanCommand, pattern);
+                if (plugin.getConfig().getBoolean("general.debug", false)) {
+                    plugin.getLogger().info("Testing wildcard pattern '" + pattern + "': " + matches);
+                }
+                if (matches) {
                     String response = section.getString(key, "");
                     if (!response.isEmpty()) {
+                        if (plugin.getConfig().getBoolean("general.debug", false)) {
+                            plugin.getLogger().info("Matched pattern: " + pattern);
+                        }
                         return new AbstractMap.SimpleEntry<>(key, response);
                     }
                 }
             }
-        }
-
-        // Finally try prefix match for backward compatibility
-        String baseCommand = cleanCommand.split(" ")[0];
-        for (String key : keys) {
-            if (key.equalsIgnoreCase("enabled"))
-                continue;
-
-            if (key.equalsIgnoreCase(baseCommand)) {
-                String response = section.getString(key, "");
-                if (!response.isEmpty()) {
-                    return new AbstractMap.SimpleEntry<>(key, response);
+            // Check exact matches and prefix matches
+            else {
+                boolean matches = cleanCommand.equals(pattern) || cleanCommand.startsWith(pattern + " ");
+                if (plugin.getConfig().getBoolean("general.debug", false)) {
+                    plugin.getLogger().info("Testing simple pattern '" + pattern + "': " + matches);
+                }
+                if (matches) {
+                    String response = section.getString(key, "");
+                    if (!response.isEmpty()) {
+                        if (plugin.getConfig().getBoolean("general.debug", false)) {
+                            plugin.getLogger().info("Matched pattern: " + pattern);
+                        }
+                        return new AbstractMap.SimpleEntry<>(key, response);
+                    }
                 }
             }
         }
@@ -341,17 +359,36 @@ public class ConfigManager {
      * @return true if the command matches the pattern
      */
     private boolean matchesWildcardPattern(String command, String pattern) {
-        // Convert wildcard pattern to regex
-        // Escape special regex characters, then replace * with regex for "any word"
-        String regex = Pattern.quote(pattern)
-                .replace("\\*", "\\E[^\\s]+\\Q") // * matches one argument (non-whitespace)
-                .replaceAll("\\\\Q\\\\E", ""); // Clean up empty quotes
+        // Split pattern by asterisks, quote each part, then join with wildcard regex
+        String[] parts = pattern.split("\\*", -1);
+        StringBuilder regexBuilder = new StringBuilder("^");
+
+        for (int i = 0; i < parts.length; i++) {
+            // Quote this part to escape any regex special characters
+            String quotedPart = Pattern.quote(parts[i]);
+            regexBuilder.append(quotedPart);
+
+            // Add wildcard matcher between parts (but not after the last part)
+            if (i < parts.length - 1) {
+                regexBuilder.append("[^\\s]+"); // Match one or more non-whitespace characters
+            }
+        }
 
         // Allow the command to have more arguments after the pattern
-        regex = "^" + regex + "($|\\s.*)";
+        regexBuilder.append("($|\\s.*)");
+
+        String regex = regexBuilder.toString();
+
+        if (plugin.getConfig().getBoolean("general.debug", false)) {
+            plugin.getLogger().info("Pattern: '" + pattern + "' -> Regex: '" + regex + "'");
+        }
 
         try {
-            return Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(command).matches();
+            boolean matches = Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(command).matches();
+            if (plugin.getConfig().getBoolean("general.debug", false)) {
+                plugin.getLogger().info("Command '" + command + "' matches regex: " + matches);
+            }
+            return matches;
         } catch (Exception e) {
             // Invalid pattern, fall back to simple prefix match
             return command.startsWith(pattern.replace("*", "").trim());
