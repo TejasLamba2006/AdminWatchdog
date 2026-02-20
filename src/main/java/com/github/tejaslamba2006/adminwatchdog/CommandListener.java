@@ -127,7 +127,7 @@ public class CommandListener implements Listener {
             handleCustomConsoleCommandResponse(senderName, "/" + command);
         }
 
-        if (plugin.getConfigManager().isCommandBlacklisted("/" + command)) {
+        if (plugin.getConfigManager().isCommandBlacklisted("/" + command, true)) {
             return;
         }
 
@@ -149,7 +149,6 @@ public class CommandListener implements Listener {
         Player player = event.getPlayer();
         String command = event.getMessage();
 
-
         if (plugin.getConfigManager().isCustomCommandResponsesEnabled()
                 && !player.hasPermission("adminwatchdog.bypass.customresponses")) {
 
@@ -158,7 +157,7 @@ public class CommandListener implements Listener {
             }
         }
 
-        if (plugin.getConfigManager().isCommandBlacklisted(command)) {
+        if (plugin.getConfigManager().isCommandBlacklisted(command, false)) {
             return;
         }
 
@@ -176,16 +175,13 @@ public class CommandListener implements Listener {
             return false;
         }
 
-
         if (plugin.getConfigManager().isAllCommandsMonitoringEnabled()) {
             return true;
         }
 
-
         if (plugin.getConfigManager().isOpsMonitoringEnabled() && player.isOp()) {
             return true;
         }
-
 
         if (plugin.getConfigManager().isPermissionMonitoringEnabled()) {
             return hasMonitoredPermission(player);
@@ -195,7 +191,7 @@ public class CommandListener implements Listener {
     }
 
     private void handleCustomCommandResponse(Player player, String command) {
-        Map.Entry<String, String> match = plugin.getConfigManager().findMatchingCustomResponse(command);
+        Map.Entry<String, String> match = plugin.getConfigManager().findMatchingCustomResponse(command, false);
         if (match != null && !match.getValue().isEmpty()) {
             String formattedResponse = match.getValue()
                     .replace(PLAYER_PLACEHOLDER, player.getName())
@@ -209,7 +205,7 @@ public class CommandListener implements Listener {
     }
 
     private void handleCustomConsoleCommandResponse(String senderName, String command) {
-        Map.Entry<String, String> match = plugin.getConfigManager().findMatchingCustomResponse(command);
+        Map.Entry<String, String> match = plugin.getConfigManager().findMatchingCustomResponse(command, true);
         if (match != null && !match.getValue().isEmpty()) {
             String formattedResponse = match.getValue()
                     .replace("%sender%", senderName)
@@ -224,7 +220,6 @@ public class CommandListener implements Listener {
 
     private MonitoringResult shouldMonitorPlayer(Player player) {
         MonitoringResult result = new MonitoringResult();
-
 
         if (player.hasPermission("adminwatchdog.bypass.commands")) {
             return result;
@@ -306,12 +301,9 @@ public class CommandListener implements Listener {
             return false;
         }
 
-
         if (plugin.getConfigManager().isCreativeInventoryOpsOnly()) {
             return player.isOp();
         }
-
-
 
         if (plugin.getConfigManager().isCreativeInventoryPermissionsOnly()) {
             if (!plugin.getConfigManager().isPermissionMonitoringEnabled()) {
@@ -319,7 +311,6 @@ public class CommandListener implements Listener {
             }
             return hasMonitoredPermission(player);
         }
-
 
         if (plugin.getConfigManager().isOpsMonitoringEnabled() && player.isOp()) {
             return true;
@@ -387,8 +378,6 @@ public class CommandListener implements Listener {
         });
     }
 
-
-
     /**
      * Stores info about items dropped from creative mode
      */
@@ -407,16 +396,13 @@ public class CommandListener implements Listener {
 
         Player player = event.getPlayer();
 
-
         if (player.getGameMode() != GameMode.CREATIVE) {
             return;
         }
 
-
         if (player.hasPermission("adminwatchdog.bypass.creative")) {
             return;
         }
-
 
         if (!shouldMonitorCreativeInventory(player)) {
             return;
@@ -425,13 +411,11 @@ public class CommandListener implements Listener {
         Item droppedItem = event.getItemDrop();
         ItemStack itemStack = droppedItem.getItemStack();
 
-
         if (plugin.getConfigManager().isCreativeItemDropTrackPickup()) {
             trackedCreativeDrops.put(droppedItem.getUniqueId(),
                     new DroppedItemInfo(player.getName(), player.getUniqueId(), itemStack.clone(),
                             System.currentTimeMillis()));
         }
-
 
         logCreativeItemDrop(player, itemStack);
     }
@@ -450,7 +434,6 @@ public class CommandListener implements Listener {
             return;
         }
 
-
         if (!(event.getEntity() instanceof Player picker)) {
             return;
         }
@@ -458,10 +441,9 @@ public class CommandListener implements Listener {
         Item item = event.getItem();
         UUID itemUuid = item.getUniqueId();
 
-
         DroppedItemInfo dropInfo = trackedCreativeDrops.remove(itemUuid);
         if (dropInfo == null) {
-            return; 
+            return;
         }
 
         if (picker.getUniqueId().equals(dropInfo.dropperUuid())) {

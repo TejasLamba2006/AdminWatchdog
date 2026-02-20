@@ -21,32 +21,41 @@ discord:
 
 # Custom command responses
 # When specific commands are run, send custom messages to Discord
-# Works for both player and console commands
+# Separate filters for player and console commands
 # RESPECTS MONITORING PERMISSIONS - only triggers for monitored players
 custom-responses:
   enabled: true
-  #
-  # BASIC EXAMPLES (matches base command):
-  # ban: "⚠️ **ADMIN ACTION** - %player% used ban command at %time%"
-  # kick: "⚠️ **ADMIN ACTION** - %player% used kick command at %time%"
-  # op: "🔐 **CRITICAL** - %player% used OP command! <@&ROLE_ID_HERE> at %time%"
-  # gamemode: "🎮 **GAMEMODE** - %player% changed gamemode at %time%"
-  #
-  # ADVANCED EXAMPLES (matches specific subcommands):
-  # "lp user": "⚠️ **LUCKPERMS** - %player% modified a user at %time%"
-  # "lp group": "⚠️ **LUCKPERMS** - %player% modified a group at %time%"
-  #
-  # WILDCARD EXAMPLES (* matches any single argument):
-  # "lp user * permission set *": "🔐 **CRITICAL** - %player% set permission with: %command% at %time%"
-  # "lp user * parent add *": "⚠️ **RANK CHANGE** - %player% added rank: %command% at %time%"
-  # "ban * *": "🔨 **BAN** - %player% banned someone: %command% at %time%"
-  #
-  # For console commands, use %sender% instead of %player%:
-  # "/stop": "🛑 **SERVER SHUTDOWN** - Console is stopping the server at %time%! <@&ADMIN_ROLE_ID>"
-  # "/reload": "🔄 **SERVER RELOAD** - %sender% reloaded server at %time%"
-  #
-  # Available placeholders: %player%, %sender%, %command%, %time%
-  # Discord mentions: <@USER_ID>, <@&ROLE_ID>, @everyone
+
+  # Player command responses
+  # Use %player%, %command%, %time% placeholders
+  player:
+    #
+    # BASIC EXAMPLES (matches base command):
+    # ban: "⚠️ **ADMIN ACTION** - %player% used ban command at %time%"
+    # kick: "⚠️ **ADMIN ACTION** - %player% used kick command at %time%"
+    # op: "🔐 **CRITICAL** - %player% used OP command! <@&ROLE_ID_HERE> at %time%"
+    # gamemode: "🎮 **GAMEMODE** - %player% changed gamemode at %time%"
+    #
+    # ADVANCED EXAMPLES (matches specific subcommands):
+    # "lp user": "⚠️ **LUCKPERMS** - %player% modified a user at %time%"
+    # "lp group": "⚠️ **LUCKPERMS** - %player% modified a group at %time%"
+    #
+    # WILDCARD EXAMPLES (* matches any single argument):
+    # "lp user * permission set *": "🔐 **CRITICAL** - %player% set permission with: %command% at %time%"
+    # "lp user * parent add *": "⚠️ **RANK CHANGE** - %player% added rank: %command% at %time%"
+    # "ban * *": "🔨 **BAN** - %player% banned someone: %command% at %time%"
+
+  # Console command responses
+  # Use %sender%, %command%, %time% placeholders
+  console:
+    #
+    # EXAMPLES:
+    # "stop": "🛑 **SERVER SHUTDOWN** - Console is stopping the server at %time%! <@&ADMIN_ROLE_ID>"
+    # "reload": "🔄 **SERVER RELOAD** - %sender% reloaded server at %time%"
+    # "give * * 64": "📦 **ITEM SPAWN** - %sender% gave items via console: %command%"
+    #
+    # Available placeholders: %sender%, %command%, %time%
+    # Discord mentions: <@USER_ID>, <@&ROLE_ID>, @everyone
 
 # Monitoring settings
 monitoring:
@@ -94,13 +103,21 @@ monitoring:
   all-commands: false
 
   # Command blacklist - these commands will never be logged
+  # Separate lists for player and console commands
   command-blacklist:
     enabled: true
-    commands:
+
+    # Player commands to never log
+    player:
       - "login"
       - "register"
       - "password"
       - "2fa"
+
+    # Console commands to never log
+    # Useful for filtering out plugin automation
+    console:
+      - "examplecommand"
 
 # Bypass permissions
 # Players with these permissions will NOT be monitored

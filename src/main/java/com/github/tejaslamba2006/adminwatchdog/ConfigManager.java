@@ -179,11 +179,19 @@ public class ConfigManager {
         return plugin.getConfig().getBoolean("monitoring.all-commands", false);
     }
 
-    public boolean isCommandBlacklisted(String command) {
+    public boolean isCommandBlacklisted(String command, boolean isConsole) {
         if (!plugin.getConfig().getBoolean("monitoring.command-blacklist.enabled", true)) {
             return false;
         }
-        List<String> blacklist = plugin.getConfig().getStringList("monitoring.command-blacklist.commands");
+
+        String section = isConsole ? "monitoring.command-blacklist.console" : "monitoring.command-blacklist.player";
+        List<String> blacklist = plugin.getConfig().getStringList(section);
+
+        // Fallback to old format if new format not found
+        if (blacklist.isEmpty()) {
+            blacklist = plugin.getConfig().getStringList("monitoring.command-blacklist.commands");
+        }
+
         return blacklist.stream().anyMatch(cmd -> command.toLowerCase().startsWith("/" + cmd.toLowerCase()));
     }
 
@@ -255,12 +263,12 @@ public class ConfigManager {
         }
     }
 
-    public boolean hasCustomCommandResponse(String command) {
-        return findMatchingCustomResponse(command) != null;
+    public boolean hasCustomCommandResponse(String command, boolean isConsole) {
+        return findMatchingCustomResponse(command, isConsole) != null;
     }
 
-    public String getCustomCommandResponse(String command) {
-        Map.Entry<String, String> match = findMatchingCustomResponse(command);
+    public String getCustomCommandResponse(String command, boolean isConsole) {
+        Map.Entry<String, String> match = findMatchingCustomResponse(command, isConsole);
         return match != null ? match.getValue() : "";
     }
 
@@ -271,13 +279,20 @@ public class ConfigManager {
      * - Subcommand: "lp user" matches "/lp user ..."
      * - Wildcards: "lp user * permission set *" where * matches any single argument
      * 
-     * @param command The full command (e.g., "/lp user Steve permission set *")
+     * @param command   The full command (e.g., "/lp user Steve permission set *")
+     * @param isConsole Whether this is a console command
      * @return Map entry with pattern key and response value, or null if no match
      */
-    public Map.Entry<String, String> findMatchingCustomResponse(String command) {
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection("custom-responses");
+    public Map.Entry<String, String> findMatchingCustomResponse(String command, boolean isConsole) {
+        String sectionPath = isConsole ? "custom-responses.console" : "custom-responses.player";
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection(sectionPath);
+
+        // Fallback to old format (direct under custom-responses)
         if (section == null) {
-            return null;
+            section = plugin.getConfig().getConfigurationSection("custom-responses");
+            if (section == null) {
+                return null;
+            }
         }
 
         String cleanCommand = command.toLowerCase().replaceFirst("^/", "");
@@ -303,7 +318,8 @@ public class ConfigManager {
                 .toList();
 
         if (plugin.getConfig().getBoolean("general.debug", false)) {
-            plugin.getLogger().info("Matching command: '" + cleanCommand + "'");
+            plugin.getLogger()
+                    .info("Matching " + (isConsole ? "console" : "player") + " command: '" + cleanCommand + "'");
             plugin.getLogger().info("Pattern order: " + keys);
         }
 
