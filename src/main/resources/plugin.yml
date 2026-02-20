@@ -20,7 +20,7 @@ permissions:
     default: op
 
   adminwatchdog.reload:
-    description: "Allows reloading plugin configuration"
+    description: "Reload plugin configuration"
     default: op
 
   adminwatchdog.monitor:
@@ -28,7 +28,7 @@ permissions:
     default: op
 
   adminwatchdog.update.check:
-    description: "Allows manually checking for updates"
+    description: "Manually check for updates"
     default: op
 
   adminwatchdog.update.notify:

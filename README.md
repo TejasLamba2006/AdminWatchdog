@@ -10,7 +10,7 @@
 ![Stars](https://img.shields.io/github/stars/tejaslamba2006/AdminWatchdog?style=for-the-badge)
 ![Sponsor](https://img.shields.io/github/sponsors/TejasLamba2006?style=for-the-badge&logo=github&logoColor=white)
 
-**Server administration monitoring with Discord webhook integration**
+**Monitor admin actions and send notifications to Discord**
 
 [Download](https://modrinth.com/plugin/adminwatchdog) | [Documentation](#features) | [Issues](https://github.com/tejaslamba2006/AdminWatchdog/issues)
 
@@ -20,80 +20,80 @@
 
 ## Overview
 
-AdminWatchdog monitors administrative actions on Minecraft servers and dispatches notifications via Discord webhooks. The plugin supports granular permission-based monitoring, wildcard command pattern matching, and async I/O operations for minimal performance impact.
+AdminWatchdog monitors administrative actions on Minecraft servers and posts notifications to Discord webhooks. You can set up permission-based monitoring, match commands with wildcard patterns, and everything runs asynchronously so it won't slow down your server.
 
-### Core Features
+### Core features
 
-- **Discord Webhook Integration** - Async HTTP POST to Discord webhook endpoints with embed support
-- **Pattern-Based Command Matching** - Wildcard patterns for monitoring specific command structures (e.g., `lp user * permission set *`)
-- **Permission-Driven Monitoring** - Configurable monitoring based on OP status or permission nodes
-- **Creative Inventory Tracking** - ItemStack monitoring with Guava-cached item metadata
-- **Bypass System** - Granular bypass permissions for trusted administrators
-- **Async I/O** - Non-blocking file logging and webhook dispatch via CompletableFuture
+- **Discord webhook integration** - Sends async HTTP POST requests to Discord with embeds
+- **Pattern-based command matching** - Use wildcards to match specific commands (like `lp user * permission set *`)
+- **Permission-driven monitoring** - Choose who to monitor based on OP status or permissions
+- **Creative inventory tracking** - Logs ItemStacks with Guava-cached item metadata
+- **Bypass system** - Give trusted admins bypass permissions
+- **Async I/O** - Non-blocking file logging and webhook dispatch with CompletableFuture
 
 ## Architecture
 
 ```
 AdminWatchdog
 ├── CommandListener      # Event handlers for PlayerCommandPreprocessEvent, ServerCommandEvent, etc.
-├── ConfigManager        # YAML configuration with wildcard pattern matching engine
+├── ConfigManager        # YAML config with wildcard pattern matching
 ├── DiscordManager       # Async webhook dispatch with embed builder
-├── MinecraftApiHelper   # Guava-cached item data with 512-entry LRU cache
+├── MinecraftApiHelper   # Guava-cached item data (512-entry LRU, 30-min TTL)
 └── UpdateChecker        # GitHub API polling for version checks
 ```
 
 ## Screenshots
 
-### Discord Webhook Output
+### Discord webhook output
 
-**Creative Inventory Embed**
+**Creative inventory embed**
 
 <img width="421" height="433" alt="image" src="https://github.com/user-attachments/assets/86ed1745-3765-43f7-b030-d618a49c4d44" />
 
-**Command Logging**
+**Command logging**
 
 <img width="993" height="150" alt="image" src="https://github.com/user-attachments/assets/31d78544-8499-4ab1-89ea-0edcb153023a" />
 
-**Custom Response Triggers**
+**Custom response triggers**
 
 <img width="806" height="70" alt="image" src="https://github.com/user-attachments/assets/e64af8ac-be4c-403a-b376-a0694cce6191" />
 
-**Gamemode Change Events**
+**Gamemode change events**
 
 <img width="641" height="144" alt="image" src="https://github.com/user-attachments/assets/de961a9e-2f48-41a2-b208-d2fe41ddab50" />
 
 ## Features
 
-### Discord Integration
+### Discord integration
 
-- Webhook POST with JSON payload construction
-- Rich embed support with thumbnails, fields, and color coding
+- Webhook POST with JSON payload
+- Rich embeds with thumbnails, fields, and color coding
 - Role/user mention parsing (`<@&ROLE_ID>`, `<@USER_ID>`)
-- Automatic retry-safe async dispatch
+- Auto-retry async dispatch
 
-### Monitoring Subsystems
+### Monitoring subsystems
 
-| Subsystem | Event Source | Configurable |
+| Subsystem | Event source | Configurable |
 |-----------|--------------|--------------|
-| Command Monitoring | `PlayerCommandPreprocessEvent` | Yes |
-| Console Monitoring | `ServerCommandEvent` | Yes |
-| Creative Inventory | `InventoryCreativeEvent` | Yes |
-| Gamemode Changes | `PlayerGameModeChangeEvent` | Yes |
-| Custom Responses | Pattern-matched commands | Yes |
+| Command monitoring | `PlayerCommandPreprocessEvent` | Yes |
+| Console monitoring | `ServerCommandEvent` | Yes |
+| Creative inventory | `InventoryCreativeEvent` | Yes |
+| Gamemode changes | `PlayerGameModeChangeEvent` | Yes |
+| Custom responses | Pattern-matched commands | Yes |
 
-### Wildcard Pattern Matching
+### Wildcard pattern matching
 
 The custom-responses system supports three matching modes:
 
-1. **Exact Match** - `ban` matches `/ban`
-2. **Prefix Match** - `lp user` matches `/lp user Steve permission set fly`
-3. **Wildcard Match** - `lp user * permission set *` where `*` matches any single argument
+1. **Exact match** - `ban` matches `/ban`
+2. **Prefix match** - `lp user` matches `/lp user Steve permission set fly`
+3. **Wildcard match** - `lp user * permission set *` where `*` matches any single argument
 
-Pattern matching is evaluated in order: exact > wildcard > prefix for specificity.
+Patterns are evaluated by specificity: exact > wildcard > prefix.
 
-### Bypass Permissions
+### Bypass permissions
 
-Players with bypass permissions are excluded from monitoring:
+Players with bypass permissions won't get logged:
 
 | Permission | Scope |
 |------------|-------|
@@ -108,7 +108,7 @@ Players with bypass permissions are excluded from monitoring:
 # Download JAR from releases
 wget https://github.com/tejaslamba2006/AdminWatchdog/releases/latest/download/AdminWatchdog.jar
 
-# Deploy to plugins directory
+# Put it in your plugins directory
 mv AdminWatchdog.jar /path/to/server/plugins/
 
 # Restart server to generate config
@@ -164,7 +164,7 @@ monitoring:
       - "password"
 ```
 
-### Placeholder Reference
+### Placeholder reference
 
 | Placeholder | Context | Description |
 |-------------|---------|-------------|
@@ -198,7 +198,7 @@ Aliases: `aw`, `awdog`
 | `adminwatchdog.bypass.customresponses` | false | Bypass custom responses |
 | `adminwatchdog.bypass.gamemode` | false | Bypass gamemode monitoring |
 
-## Building from Source
+## Building from source
 
 ### Requirements
 
@@ -225,7 +225,7 @@ dependencies {
 }
 ```
 
-## Performance Notes
+## Performance notes
 
 - File logging uses `CompletableFuture.runAsync()` to avoid blocking the main thread
 - Discord webhooks dispatch asynchronously

@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.20+-green?style=for-the-badge&logo=minecraft)
 
-**Keep track of what your admins are doing and get notified on Discord**
+**Monitor what your admins are doing and get notified on Discord**
 
 [Documentation](#features) | [Report Bug](https://github.com/tejaslamba2006/AdminWatchdog/issues) | [Request Feature](https://github.com/tejaslamba2006/AdminWatchdog/issues)
 
@@ -15,60 +15,60 @@
 
 ## What is AdminWatchdog?
 
-AdminWatchdog lets you monitor what staff members do on your server. When an admin runs a command, changes gamemode, or takes items from creative mode, the plugin sends a message to your Discord channel. This helps server owners keep track of staff activity and catch any misuse.
+AdminWatchdog monitors what staff members do on your server. When an admin runs a command, changes gamemode, or takes items from creative mode, the plugin sends a message to your Discord channel. Helps you keep track of staff activity and catch misuse.
 
 ### What it does
 
 - Sends Discord messages when admins run commands
-- Tracks when players switch gamemodes
+- Tracks gamemode switches
 - Logs items taken from creative inventory
-- Lets you set up custom alerts for specific commands
-- Only monitors people you want to monitor
+- Sets up custom alerts for specific commands
+- Only monitors who you want to monitor
 - Lets trusted admins bypass monitoring
 
 ## Screenshots
 
-### Discord Messages
+### Discord messages
 
-**Creative Inventory Tracking**
+**Creative inventory tracking**
 
-When someone takes items from creative mode, you get a nice Discord message showing exactly what they took:
+When someone takes items from creative mode, you get a Discord message showing exactly what they took:
 
 ![Replace this with a description](https://cdn.modrinth.com/data/cached_images/6c28fc8affd6b432fdf79867097c9b84fbd2c00a.png)
 
-**Command Alerts**
+**Command alerts**
 
 <img width="993" height="150" alt="image" src="https://github.com/user-attachments/assets/31d78544-8499-4ab1-89ea-0edcb153023a" />
 
-**Custom Alerts**
+**Custom alerts**
 
 Set up special messages for important commands:
 
 <img width="806" height="70" alt="image" src="https://github.com/user-attachments/assets/e64af8ac-be4c-403a-b376-a0694cce6191" />
 
-**Gamemode Changes**
+**Gamemode changes**
 
 <img width="641" height="144" alt="image" src="https://github.com/user-attachments/assets/de961a9e-2f48-41a2-b208-d2fe41ddab50" />
 
 ## Features
 
-### Discord Alerts
+### Discord alerts
 
-- Get instant notifications in your Discord server
+- Instant notifications in your Discord server
 - Nice looking messages with item pictures
 - Ping specific roles for important commands
 - Works with any Discord channel using webhooks
 
-### What Gets Monitored
+### What gets monitored
 
 - Commands run by admins
 - Commands run from console
 - Gamemode changes
 - Items taken from creative inventory
 
-### Who Gets Monitored
+### Who gets monitored
 
-You choose who to monitor:
+You choose:
 
 - Only OPs
 - Only players with certain permissions
@@ -76,7 +76,7 @@ You choose who to monitor:
 
 You can also give trusted admins a bypass permission so they don't get logged.
 
-### Custom Command Alerts
+### Custom command alerts
 
 Set up special alerts for commands you care about. You can even match specific command patterns:
 
@@ -84,9 +84,9 @@ Set up special alerts for commands you care about. You can even match specific c
 - `lp user` - matches LuckPerms user commands
 - `lp user * permission set *` - matches only when someone sets a permission
 
-This lets you get pinged only for the important stuff, like when someone grants a dangerous permission.
+Get pinged only for the important stuff, like when someone grants a dangerous permission.
 
-## How to Install
+## How to install
 
 1. Download the plugin from the [Downloads tab](https://modrinth.com/plugin/adminwatchdog/versions)
 2. Put the JAR file in your server's `plugins` folder
@@ -95,7 +95,7 @@ This lets you get pinged only for the important stuff, like when someone grants 
 5. Add your Discord webhook URL
 6. Run `/adminwatchdog reload`
 
-## Setting Up Discord
+## Setting up Discord
 
 1. In Discord, go to your channel settings
 2. Click "Integrations" then "Webhooks"
@@ -105,7 +105,7 @@ This lets you get pinged only for the important stuff, like when someone grants 
 
 ## Configuration
 
-### Basic Setup
+### Basic setup
 
 ```yaml
 discord:
@@ -113,7 +113,7 @@ discord:
   enabled: true
 ```
 
-### Custom Alerts
+### Custom alerts
 
 Set up alerts for specific commands:
 
@@ -170,7 +170,7 @@ Give yourself one of the bypass permissions. For example, if you don't want cust
 /lp user YourName permission set adminwatchdog.bypass.customresponses true
 ```
 
-## Need Help?
+## Need help?
 
 1. Check if someone already asked about your problem in [Issues](https://github.com/tejaslamba2006/AdminWatchdog/issues)
 2. Join the [Discord server](https://discord.gg/msEkYDWpXM)

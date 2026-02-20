@@ -265,10 +265,10 @@ public class ConfigManager {
     }
 
     /**
-     * Finds a matching custom response for a command, supporting wildcards.
-     * Patterns can use:
-     * - Simple command: "lp" matches "/lp" only
-     * - Command with subcommand: "lp user" matches "/lp user ..."
+     * Finds a matching custom response for a command, with wildcard support.
+     * Patterns:
+     * - Simple: "lp" matches "/lp" only
+     * - Subcommand: "lp user" matches "/lp user ..."
      * - Wildcards: "lp user * permission set *" where * matches any single argument
      * 
      * @param command The full command (e.g., "/lp user Steve permission set *")
@@ -282,18 +282,17 @@ public class ConfigManager {
 
         String cleanCommand = command.toLowerCase().replaceFirst("^/", "");
 
-        // Get all keys except 'enabled' and sort by specificity (longer patterns first)
         List<String> keys = section.getKeys(false).stream()
                 .filter(key -> !key.equalsIgnoreCase("enabled"))
                 .sorted((a, b) -> {
-                    // Count words in pattern (wildcards count as words)
+
                     int aWords = a.split("\\s+").length;
                     int bWords = b.split("\\s+").length;
-                    // Longer patterns (more words) come first
+
                     if (aWords != bWords) {
                         return Integer.compare(bWords, aWords);
                     }
-                    // If same length, wildcards come before non-wildcards
+
                     boolean aHasWildcard = a.contains("*");
                     boolean bHasWildcard = b.contains("*");
                     if (aHasWildcard != bHasWildcard) {
@@ -308,11 +307,9 @@ public class ConfigManager {
             plugin.getLogger().info("Pattern order: " + keys);
         }
 
-        // Try all patterns in order of specificity
         for (String key : keys) {
             String pattern = key.toLowerCase();
 
-            // Check wildcard patterns
             if (pattern.contains("*")) {
                 boolean matches = matchesWildcardPattern(cleanCommand, pattern);
                 if (plugin.getConfig().getBoolean("general.debug", false)) {
@@ -328,7 +325,7 @@ public class ConfigManager {
                     }
                 }
             }
-            // Check exact matches and prefix matches
+
             else {
                 boolean matches = cleanCommand.equals(pattern) || cleanCommand.startsWith(pattern + " ");
                 if (plugin.getConfig().getBoolean("general.debug", false)) {
@@ -350,31 +347,29 @@ public class ConfigManager {
     }
 
     /**
-     * Matches a command against a wildcard pattern.
+     * Checks if a command matches a wildcard pattern.
      * Pattern: "lp user * permission set *"
      * Command: "lp user Steve permission set essentials.fly"
      * 
      * @param command The actual command (without leading /)
      * @param pattern The pattern with * wildcards
-     * @return true if the command matches the pattern
+     * @return true if the command matches
      */
     private boolean matchesWildcardPattern(String command, String pattern) {
-        // Split pattern by asterisks, quote each part, then join with wildcard regex
+
         String[] parts = pattern.split("\\*", -1);
         StringBuilder regexBuilder = new StringBuilder("^");
 
         for (int i = 0; i < parts.length; i++) {
-            // Quote this part to escape any regex special characters
+
             String quotedPart = Pattern.quote(parts[i]);
             regexBuilder.append(quotedPart);
 
-            // Add wildcard matcher between parts (but not after the last part)
             if (i < parts.length - 1) {
-                regexBuilder.append("[^\\s]+"); // Match one or more non-whitespace characters
+                regexBuilder.append("[^\\s]+");
             }
         }
 
-        // Allow the command to have more arguments after the pattern
         regexBuilder.append("($|\\s.*)");
 
         String regex = regexBuilder.toString();
@@ -390,7 +385,7 @@ public class ConfigManager {
             }
             return matches;
         } catch (Exception e) {
-            // Invalid pattern, fall back to simple prefix match
+
             return command.startsWith(pattern.replace("*", "").trim());
         }
     }

@@ -1,19 +1,19 @@
-# AdminWatchdog Messages Configuration
+# AdminWatchdog messages configuration
 # All plugin messages are configurable here
-# Use %player%, %command%, %oldmode%, %newmode%, %time%, %sender% as placeholders
+# Placeholders: %player%, %command%, %oldmode%, %newmode%, %time%, %sender%
 
 # Plugin startup/shutdown messages
 plugin:
-  enabled: "AdminWatchdog Is Active"
-  disabled: "AdminWatchdog Is Inactive"
+  enabled: "AdminWatchdog is active"
+  disabled: "AdminWatchdog is inactive"
 
 # Command messages
 commands:
   usage: "Usage: /adminwatchdog <version|v|ver|reload>"
   version: "AdminWatchdog plugin version: %version%"
-  reload-success: "AdminWatchdog configuration reloaded successfully!"
-  reload-failed: "Failed to reload AdminWatchdog configuration!"
-  no-permission: "You don't have permission to use this command!"
+  reload-success: "AdminWatchdog configuration reloaded successfully"
+  reload-failed: "Failed to reload AdminWatchdog configuration"
+  no-permission: "You don't have permission to use this command"
 
 # Log format messages
 logging:
@@ -36,20 +36,20 @@ discord:
   creative-inventory-detailed: "🎨 **%player%** took **%amount%x %item%** (%material%) from creative inventory"
   creative-item-drop: "📦 **%player%** dropped **%amount%x %item%** from creative mode"
   creative-item-pickup: "⚠️ **%picker%** picked up **%amount%x %item%** (originally dropped by **%dropper%**)"
-  update-available: "🔄 **AdminWatchdog Update Available!** Current: %current% → Latest: %latest% | Download: %download%"
+  update-available: "🔄 **AdminWatchdog update available** Current: %current% → Latest: %latest% | Download: %download%"
 
 # Update checker messages
 update:
-  notification: "&e&l[UPDATE] &eAdminWatchdog %latest% is available! You are using %current%. Download: &b%download%"
+  notification: "&e&l[UPDATE] &eAdminWatchdog %latest% is available. You are using %current%. Download: &b%download%"
   check-start: "Checking for updates..."
   check-success: "Update check completed. Current version: %current%, Latest: %latest%"
   check-failed: "Failed to check for updates: %error%"
   up-to-date: "You are using the latest version (%current%)"
-  available: "Update available! %current% → %latest%"
+  available: "Update available: %current% → %latest%"
 
 # Error messages
 errors:
-  webhook-not-set: "Webhook URL is not set in config.yml!"
+  webhook-not-set: "Webhook URL is not set in config.yml"
   webhook-failed: "Failed to send webhook: HTTP %code%"
   log-file-creation-failed: "Failed to create log file"
   config-load-failed: "Failed to load configuration file: %file%"

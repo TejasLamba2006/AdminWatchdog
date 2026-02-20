@@ -50,7 +50,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Stop the update checker
+     * Stop the update checker task
      */
     public void stopUpdateChecker() {
         if (updateTask != null && !updateTask.isCancelled()) {
@@ -60,7 +60,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Manually check for updates (can be called from command)
+     * Check for updates manually (for command use)
      */
     public CompletableFuture<UpdateResult> checkForUpdatesSync() {
         return CompletableFuture.supplyAsync(() -> {
@@ -75,7 +75,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Asynchronous update check
+     * Async update check
      */
     private void checkForUpdates() {
         try {
@@ -147,7 +147,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Compare version strings to determine if one is newer
+     * Compare versions to see if latest is newer
      */
     private boolean isNewerVersion(String current, String latest) {
         try {
@@ -174,7 +174,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Notify online administrators about available update
+     * Notify online admins about the update
      */
     private void notifyAdministrators() {
         if (!updateAvailable)
@@ -195,7 +195,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Send Discord notification about available update
+     * Send Discord update notification
      */
     private void sendDiscordUpdateNotification() {
         if (!plugin.getConfigManager().isDiscordEnabled()) {
@@ -211,7 +211,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Get current update status
+     * Get update status
      */
     public boolean isUpdateAvailable() {
         return updateAvailable;
@@ -226,7 +226,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Result class for update checks
+     * Update check result
      */
     public static class UpdateResult {
         private final boolean updateAvailable;

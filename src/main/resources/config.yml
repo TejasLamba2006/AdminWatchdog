@@ -1,6 +1,6 @@
-# AdminWatchdog Configuration File
+# AdminWatchdog configuration
 
-# Discord Integration
+# Discord integration
 discord:
   webhook-url: ""
   enabled: true
@@ -10,7 +10,7 @@ discord:
     enabled: true
     # Use rich embeds with item images and descriptions
     creative-inventory: true
-    # Embed color (hex color code)
+    # Embed color (hex)
     color: "#00d4aa"
     # Include item description from API
     include-description: true
@@ -19,10 +19,10 @@ discord:
     # Fallback to simple message if API fails
     fallback-to-simple: true
 
-# Custom Command Responses
+# Custom command responses
 # When specific commands are run, send custom messages to Discord
 # Works for both player and console commands
-# NOW RESPECTS MONITORING PERMISSIONS - only triggers for monitored players!
+# RESPECTS MONITORING PERMISSIONS - only triggers for monitored players
 custom-responses:
   enabled: true
   #
@@ -46,9 +46,9 @@ custom-responses:
   # "/reload": "🔄 **SERVER RELOAD** - %sender% reloaded server at %time%"
   #
   # Available placeholders: %player%, %sender%, %command%, %time%
-  # You can use Discord mentions like <@USER_ID>, <@&ROLE_ID>, or @everyone
+  # Discord mentions: <@USER_ID>, <@&ROLE_ID>, @everyone
 
-# Monitoring Settings
+# Monitoring settings
 monitoring:
   # Monitor operators
   ops: true
@@ -56,7 +56,7 @@ monitoring:
   # Monitor players with specific permissions
   permissions:
     enabled: true
-    # List of permissions to monitor
+    # Permissions to monitor
     list:
       - "adminwatchdog.monitor"
       - "minecraft.command.*"
@@ -102,16 +102,15 @@ monitoring:
       - "password"
       - "2fa"
 
-# Bypass Permissions
+# Bypass permissions
 # Players with these permissions will NOT be monitored
-# Give to trusted admins who don't need to be watched
-bypass:
-  # adminwatchdog.bypass.commands - bypass command logging
-  # adminwatchdog.bypass.creative - bypass creative inventory logging
-  # adminwatchdog.bypass.customresponses - bypass custom response triggers
-  # adminwatchdog.bypass.gamemode - bypass gamemode change logging
+# Give to trusted admins who don't need watching
+# adminwatchdog.bypass.commands - bypass command logging
+# adminwatchdog.bypass.creative - bypass creative inventory logging
+# adminwatchdog.bypass.customresponses - bypass custom response triggers
+# adminwatchdog.bypass.gamemode - bypass gamemode change logging
 
-# Logging Settings
+# Logging settings
 logging:
   # Enable file logging
   file-logging: true
@@ -125,14 +124,14 @@ logging:
   # Number of old log files to keep
   keep-old-logs: 5
 
-# Update Checker Settings
+# Update checker settings
 update-checker:
   # Enable automatic update checking
   enabled: true
   # Send Discord notifications for updates
   discord-notifications: true
 
-# General Settings
+# General settings
 general:
   # Check for updates on startup
   check-updates: true

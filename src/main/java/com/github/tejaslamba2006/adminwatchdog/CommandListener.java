@@ -34,7 +34,6 @@ public class CommandListener implements Listener {
     private final File logFile;
     private final AdminWatchdog plugin;
 
-    // Track items dropped by creative mode players: Item UUID -> Dropper info
     private final Map<UUID, DroppedItemInfo> trackedCreativeDrops = new ConcurrentHashMap<>();
 
     public CommandListener(AdminWatchdog plugin) {
@@ -56,19 +55,17 @@ public class CommandListener implements Listener {
             e.printStackTrace();
         }
 
-        // Start cleanup task for expired tracked drops
         startDropCleanupTask();
     }
 
     private void startDropCleanupTask() {
-        // Clean up expired drops every minute
         plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
             long now = System.currentTimeMillis();
             int trackingDuration = plugin.getConfigManager().getCreativeItemDropTrackingDuration();
             long expiryTime = TimeUnit.SECONDS.toMillis(trackingDuration);
 
             trackedCreativeDrops.entrySet().removeIf(entry -> (now - entry.getValue().dropTime()) > expiryTime);
-        }, 20L * 60, 20L * 60); // Run every minute
+        }, 20L * 60, 20L * 60);
     }
 
     @EventHandler
@@ -79,7 +76,6 @@ public class CommandListener implements Listener {
 
         Player player = event.getPlayer();
 
-        // Check bypass permission
         if (player.hasPermission("adminwatchdog.bypass.gamemode")) {
             return;
         }
@@ -153,10 +149,10 @@ public class CommandListener implements Listener {
         Player player = event.getPlayer();
         String command = event.getMessage();
 
-        // Check bypass permission for custom responses
+
         if (plugin.getConfigManager().isCustomCommandResponsesEnabled()
                 && !player.hasPermission("adminwatchdog.bypass.customresponses")) {
-            // Only trigger custom responses if player should be monitored
+
             if (shouldMonitorPlayerForCustomResponses(player)) {
                 handleCustomCommandResponse(player, command);
             }
@@ -175,22 +171,22 @@ public class CommandListener implements Listener {
     }
 
     private boolean shouldMonitorPlayerForCustomResponses(Player player) {
-        // Check if player has bypass permission
+
         if (player.hasPermission("adminwatchdog.bypass.customresponses")) {
             return false;
         }
 
-        // If all-commands monitoring is enabled, monitor everyone
+
         if (plugin.getConfigManager().isAllCommandsMonitoringEnabled()) {
             return true;
         }
 
-        // Check if player is op and ops monitoring is enabled
+
         if (plugin.getConfigManager().isOpsMonitoringEnabled() && player.isOp()) {
             return true;
         }
 
-        // Check if player has monitored permissions
+
         if (plugin.getConfigManager().isPermissionMonitoringEnabled()) {
             return hasMonitoredPermission(player);
         }
@@ -229,7 +225,7 @@ public class CommandListener implements Listener {
     private MonitoringResult shouldMonitorPlayer(Player player) {
         MonitoringResult result = new MonitoringResult();
 
-        // Check bypass permission
+
         if (player.hasPermission("adminwatchdog.bypass.commands")) {
             return result;
         }
@@ -305,18 +301,18 @@ public class CommandListener implements Listener {
     }
 
     private boolean shouldMonitorCreativeInventory(Player player) {
-        // Check bypass permission first
+
         if (player.hasPermission("adminwatchdog.bypass.creative")) {
             return false;
         }
 
-        // If ops-only is enabled, only monitor ops
+
         if (plugin.getConfigManager().isCreativeInventoryOpsOnly()) {
             return player.isOp();
         }
 
-        // If permissions-only is enabled, only monitor players with monitored
-        // permissions
+
+
         if (plugin.getConfigManager().isCreativeInventoryPermissionsOnly()) {
             if (!plugin.getConfigManager().isPermissionMonitoringEnabled()) {
                 return false;
@@ -324,7 +320,7 @@ public class CommandListener implements Listener {
             return hasMonitoredPermission(player);
         }
 
-        // Default behavior: respect monitoring settings (ops and/or permission holders)
+
         if (plugin.getConfigManager().isOpsMonitoringEnabled() && player.isOp()) {
             return true;
         }
@@ -391,10 +387,10 @@ public class CommandListener implements Listener {
         });
     }
 
-    // ==================== Creative Item Drop Tracking ====================
+
 
     /**
-     * Record to store information about dropped items from creative mode
+     * Stores info about items dropped from creative mode
      */
     private record DroppedItemInfo(String dropperName, UUID dropperUuid, ItemStack item, long dropTime) {
     }
@@ -411,17 +407,17 @@ public class CommandListener implements Listener {
 
         Player player = event.getPlayer();
 
-        // Only track drops from creative mode players
+
         if (player.getGameMode() != GameMode.CREATIVE) {
             return;
         }
 
-        // Check bypass permission
+
         if (player.hasPermission("adminwatchdog.bypass.creative")) {
             return;
         }
 
-        // Check if player should be monitored
+
         if (!shouldMonitorCreativeInventory(player)) {
             return;
         }
@@ -429,14 +425,14 @@ public class CommandListener implements Listener {
         Item droppedItem = event.getItemDrop();
         ItemStack itemStack = droppedItem.getItemStack();
 
-        // Store the drop info for pickup tracking
+
         if (plugin.getConfigManager().isCreativeItemDropTrackPickup()) {
             trackedCreativeDrops.put(droppedItem.getUniqueId(),
                     new DroppedItemInfo(player.getName(), player.getUniqueId(), itemStack.clone(),
                             System.currentTimeMillis()));
         }
 
-        // Log the drop
+
         logCreativeItemDrop(player, itemStack);
     }
 
@@ -454,7 +450,7 @@ public class CommandListener implements Listener {
             return;
         }
 
-        // Only track player pickups
+
         if (!(event.getEntity() instanceof Player picker)) {
             return;
         }
@@ -462,18 +458,16 @@ public class CommandListener implements Listener {
         Item item = event.getItem();
         UUID itemUuid = item.getUniqueId();
 
-        // Check if this was a tracked creative drop
+
         DroppedItemInfo dropInfo = trackedCreativeDrops.remove(itemUuid);
         if (dropInfo == null) {
-            return; // Not a tracked creative drop
+            return; 
         }
 
-        // Don't log if the same player picked it up
         if (picker.getUniqueId().equals(dropInfo.dropperUuid())) {
             return;
         }
 
-        // Log the pickup
         logCreativeItemPickup(picker, dropInfo);
     }
 

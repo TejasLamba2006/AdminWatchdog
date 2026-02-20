@@ -56,19 +56,15 @@ public final class AdminWatchdog extends JavaPlugin {
     private void initializeMetrics() {
         metrics = new Metrics(this, BSTATS_PLUGIN_ID);
 
-        // Discord enabled chart
         metrics.addCustomChart(
                 new SimplePie("discord_enabled", () -> configManager.isDiscordEnabled() ? "Enabled" : "Disabled"));
 
-        // Creative inventory monitoring chart
         metrics.addCustomChart(new SimplePie("creative_monitoring",
                 () -> configManager.isCreativeInventoryMonitoringEnabled() ? "Enabled" : "Disabled"));
 
-        // Custom responses chart
         metrics.addCustomChart(new SimplePie("custom_responses",
                 () -> configManager.isCustomCommandResponsesEnabled() ? "Enabled" : "Disabled"));
 
-        // Item drop tracking chart
         metrics.addCustomChart(new SimplePie("item_drop_tracking",
                 () -> configManager.isCreativeItemDropMonitoringEnabled() ? "Enabled" : "Disabled"));
     }

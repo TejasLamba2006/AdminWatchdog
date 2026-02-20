@@ -49,7 +49,7 @@ public final class DiscordManager {
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json");
 
-                // Include allowed_mentions to enable pings
+                
                 String jsonPayload = String.format(
                         "{\"content\":\"%s\",\"allowed_mentions\":{\"parse\":[\"users\",\"roles\",\"everyone\"]}}",
                         safeJsonString(message));
@@ -272,7 +272,7 @@ public final class DiscordManager {
                 return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
                         .serialize(item.getItemMeta().displayName()).trim();
             } catch (Exception e) {
-                // Fallback to material name if there's an issue
+                
             }
         }
         return item.getType().name().toLowerCase().replace('_', ' ');
@@ -374,7 +374,7 @@ public final class DiscordManager {
         return escaped;
     }
 
-    // ==================== Creative Item Drop/Pickup Methods ====================
+    
 
     public void sendCreativeItemDrop(String playerName, ItemStack item) {
         if (!plugin.getConfigManager().isDiscordEnabled()) {
@@ -513,7 +513,7 @@ public final class DiscordManager {
         String time = plugin.getConfigManager().getFormattedTime();
         int amount = item.getAmount();
 
-        // Use orange/warning color for pickups
+        
         int colorInt = 0xFF9800;
 
         StringBuilder embedJson = new StringBuilder();
