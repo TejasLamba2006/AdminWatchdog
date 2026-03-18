@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,7 +18,7 @@ import java.util.regex.Pattern;
 
 public class ConfigManager {
 
-    private static final int CURRENT_CONFIG_VERSION = 1;
+    private static final int CURRENT_CONFIG_VERSION = 3;
     private static final String CONFIG_VERSION_KEY = "config-version";
 
     private final AdminWatchdog plugin;
@@ -203,6 +204,22 @@ public class ConfigManager {
         return plugin.getConfig().getString("discord.webhook-url", "");
     }
 
+    public boolean isDiscordBatchingEnabled() {
+        return plugin.getConfig().getBoolean("discord.batching.enabled", false);
+    }
+
+    public int getDiscordBatchIntervalMs() {
+        return Math.max(250, plugin.getConfig().getInt("discord.batching.interval-ms", 1000));
+    }
+
+    public int getDiscordBatchMaxMessages() {
+        return Math.max(1, plugin.getConfig().getInt("discord.batching.max-messages", 10));
+    }
+
+    public int getDiscordBatchMaxCombinedLength() {
+        return Math.max(200, plugin.getConfig().getInt("discord.batching.max-combined-length", 1800));
+    }
+
     public boolean isDiscordEmbedsEnabled() {
         return plugin.getConfig().getBoolean("discord.embeds.enabled", true);
     }
@@ -272,6 +289,17 @@ public class ConfigManager {
         return match != null ? match.getValue() : "";
     }
 
+    public boolean doesCommandMatchPattern(String command, String pattern) {
+        String cleanCommand = command.toLowerCase().replaceFirst("^/", "");
+        String normalizedPattern = pattern.toLowerCase().replaceFirst("^/", "");
+
+        if (isAdvancedPattern(normalizedPattern)) {
+            return matchesAdvancedPattern(cleanCommand, normalizedPattern);
+        }
+
+        return cleanCommand.equals(normalizedPattern) || cleanCommand.startsWith(normalizedPattern + " ");
+    }
+
     /**
      * Finds a matching custom response for a command, with wildcard support.
      * Patterns:
@@ -295,8 +323,6 @@ public class ConfigManager {
             }
         }
 
-        String cleanCommand = command.toLowerCase().replaceFirst("^/", "");
-
         List<String> keys = section.getKeys(false).stream()
                 .filter(key -> !key.equalsIgnoreCase("enabled"))
                 .sorted((a, b) -> {
@@ -308,8 +334,8 @@ public class ConfigManager {
                         return Integer.compare(bWords, aWords);
                     }
 
-                    boolean aHasWildcard = a.contains("*");
-                    boolean bHasWildcard = b.contains("*");
+                    boolean aHasWildcard = isAdvancedPattern(a);
+                    boolean bHasWildcard = isAdvancedPattern(b);
                     if (aHasWildcard != bHasWildcard) {
                         return aHasWildcard ? -1 : 1;
                     }
@@ -319,42 +345,25 @@ public class ConfigManager {
 
         if (plugin.getConfig().getBoolean("general.debug", false)) {
             plugin.getLogger()
-                    .info("Matching " + (isConsole ? "console" : "player") + " command: '" + cleanCommand + "'");
+                    .info("Matching " + (isConsole ? "console" : "player") + " command: '"
+                            + command.toLowerCase().replaceFirst("^/", "") + "'");
             plugin.getLogger().info("Pattern order: " + keys);
         }
 
         for (String key : keys) {
-            String pattern = key.toLowerCase();
+            String pattern = key.toLowerCase().replaceFirst("^/", "");
 
-            if (pattern.contains("*")) {
-                boolean matches = matchesWildcardPattern(cleanCommand, pattern);
-                if (plugin.getConfig().getBoolean("general.debug", false)) {
-                    plugin.getLogger().info("Testing wildcard pattern '" + pattern + "': " + matches);
-                }
-                if (matches) {
-                    String response = section.getString(key, "");
-                    if (!response.isEmpty()) {
-                        if (plugin.getConfig().getBoolean("general.debug", false)) {
-                            plugin.getLogger().info("Matched pattern: " + pattern);
-                        }
-                        return new AbstractMap.SimpleEntry<>(key, response);
-                    }
-                }
+            boolean matches = doesCommandMatchPattern(command, pattern);
+            if (plugin.getConfig().getBoolean("general.debug", false)) {
+                plugin.getLogger().info("Testing pattern '" + pattern + "': " + matches);
             }
-
-            else {
-                boolean matches = cleanCommand.equals(pattern) || cleanCommand.startsWith(pattern + " ");
-                if (plugin.getConfig().getBoolean("general.debug", false)) {
-                    plugin.getLogger().info("Testing simple pattern '" + pattern + "': " + matches);
-                }
-                if (matches) {
-                    String response = section.getString(key, "");
-                    if (!response.isEmpty()) {
-                        if (plugin.getConfig().getBoolean("general.debug", false)) {
-                            plugin.getLogger().info("Matched pattern: " + pattern);
-                        }
-                        return new AbstractMap.SimpleEntry<>(key, response);
+            if (matches) {
+                String response = section.getString(key, "");
+                if (!response.isEmpty()) {
+                    if (plugin.getConfig().getBoolean("general.debug", false)) {
+                        plugin.getLogger().info("Matched pattern: " + pattern);
                     }
+                    return new AbstractMap.SimpleEntry<>(key, response);
                 }
             }
         }
@@ -362,51 +371,135 @@ public class ConfigManager {
         return null;
     }
 
+    public boolean isAdvancedPattern(String pattern) {
+        return pattern.contains("*") || pattern.contains(">") || pattern.contains("<") || pattern.contains("==");
+    }
+
     /**
-     * Checks if a command matches a wildcard pattern.
-     * Pattern: "lp user * permission set *"
-     * Command: "lp user Steve permission set essentials.fly"
+     * Checks if a command matches an advanced pattern.
+     * Pattern: "give * * >=5"
+     * Command: "give Steve diamond 10"
      * 
      * @param command The actual command (without leading /)
-     * @param pattern The pattern with * wildcards
+     * @param pattern The advanced pattern
      * @return true if the command matches
      */
-    private boolean matchesWildcardPattern(String command, String pattern) {
+    private boolean matchesAdvancedPattern(String command, String pattern) {
 
-        String[] parts = pattern.split("\\*", -1);
-        StringBuilder regexBuilder = new StringBuilder("^");
+        String[] cmdArgs = command.trim().split("\\s+");
+        String[] patArgs = pattern.trim().split("\\s+");
 
-        for (int i = 0; i < parts.length; i++) {
+        if (cmdArgs.length < patArgs.length) {
+            return false;
+        }
 
-            String quotedPart = Pattern.quote(parts[i]);
-            regexBuilder.append(quotedPart);
+        for (int i = 0; i < patArgs.length; i++) {
+            String pWord = patArgs[i];
+            String cWord = cmdArgs[i];
 
-            if (i < parts.length - 1) {
-                regexBuilder.append("[^\\s]+");
+            if (pWord.equals("*")) {
+                continue;
+            } else if (pWord.matches("^(>|<|>=|<=|==)-?\\d+(\\.\\d+)?$")) {
+                try {
+                    double cValue = Double.parseDouble(cWord);
+                    if (pWord.startsWith(">=")) {
+                        double pValue = Double.parseDouble(pWord.substring(2));
+                        if (!(cValue >= pValue)) return false;
+                    } else if (pWord.startsWith("<=")) {
+                        double pValue = Double.parseDouble(pWord.substring(2));
+                        if (!(cValue <= pValue)) return false;
+                    } else if (pWord.startsWith("==")) {
+                        double pValue = Double.parseDouble(pWord.substring(2));
+                        if (!(cValue == pValue)) return false;
+                    } else if (pWord.startsWith(">")) {
+                        double pValue = Double.parseDouble(pWord.substring(1));
+                        if (!(cValue > pValue)) return false;
+                    } else if (pWord.startsWith("<")) {
+                        double pValue = Double.parseDouble(pWord.substring(1));
+                        if (!(cValue < pValue)) return false;
+                    } else {
+                        return false;
+                    }
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            } else if (pWord.contains("*")) {
+                String regex = "^" + Pattern.quote(pWord).replace("*", "\\E.*\\Q") + "$";
+                if (!Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(cWord).matches()) {
+                    return false;
+                }
+            } else if (!pWord.equalsIgnoreCase(cWord)) {
+                return false;
             }
         }
 
-        regexBuilder.append("($|\\s.*)");
-
-        String regex = regexBuilder.toString();
-
-        if (plugin.getConfig().getBoolean("general.debug", false)) {
-            plugin.getLogger().info("Pattern: '" + pattern + "' -> Regex: '" + regex + "'");
-        }
-
-        try {
-            boolean matches = Pattern.compile(regex, Pattern.CASE_INSENSITIVE).matcher(command).matches();
-            if (plugin.getConfig().getBoolean("general.debug", false)) {
-                plugin.getLogger().info("Command '" + command + "' matches regex: " + matches);
-            }
-            return matches;
-        } catch (Exception e) {
-
-            return command.startsWith(pattern.replace("*", "").trim());
-        }
+        return true;
     }
 
     public boolean isCustomCommandResponsesEnabled() {
         return plugin.getConfig().getBoolean("custom-responses.enabled", false);
+    }
+
+    public boolean isSuppressNormalLoggingEnabled() {
+        return plugin.getConfig().getBoolean("custom-responses.suppress-normal-logging", false);
+    }
+
+    public boolean isRepeatTriggersEnabled() {
+        return plugin.getConfig().getBoolean("custom-responses.repeat-triggers.enabled", false);
+    }
+
+    public List<RepeatTrigger> getRepeatTriggers(boolean isConsole) {
+        if (!isRepeatTriggersEnabled()) {
+            return List.of();
+        }
+
+        String path = isConsole
+                ? "custom-responses.repeat-triggers.console"
+                : "custom-responses.repeat-triggers.player";
+
+        List<Map<?, ?>> rawTriggers = plugin.getConfig().getMapList(path);
+        List<RepeatTrigger> parsedTriggers = new ArrayList<>();
+
+        for (Map<?, ?> rawTrigger : rawTriggers) {
+            Object patternRaw = rawTrigger.containsKey("pattern") ? rawTrigger.get("pattern") : "";
+            Object responseRaw = rawTrigger.containsKey("response") ? rawTrigger.get("response") : "";
+
+            String pattern = String.valueOf(patternRaw).trim();
+            String response = String.valueOf(responseRaw).trim();
+
+            int count = parsePositiveInt(rawTrigger.get("count"), 3);
+            int intervalSeconds = parsePositiveInt(rawTrigger.get("interval-seconds"), 10);
+
+            if (pattern.isEmpty() || response.isEmpty()) {
+                continue;
+            }
+
+            if (count < 2 || intervalSeconds < 1) {
+                continue;
+            }
+
+            parsedTriggers.add(new RepeatTrigger(pattern, count, intervalSeconds, response));
+        }
+
+        return parsedTriggers;
+    }
+
+    private int parsePositiveInt(Object rawValue, int defaultValue) {
+        if (rawValue instanceof Number numberValue) {
+            return numberValue.intValue();
+        }
+
+        if (rawValue instanceof String stringValue) {
+            try {
+                return Integer.parseInt(stringValue);
+            } catch (NumberFormatException ignored) {
+                return defaultValue;
+            }
+        }
+
+        return defaultValue;
+    }
+
+    public record RepeatTrigger(String pattern, int count, int intervalSeconds, String response) {
     }
 }

@@ -5,6 +5,17 @@ discord:
   webhook-url: ""
   enabled: true
 
+  # Batch multiple command logs into fewer Discord requests.
+  # Helps reduce request spikes during command spam.
+  batching:
+    enabled: false
+    # Flush interval in milliseconds
+    interval-ms: 1000
+    # Maximum messages to merge per Discord request
+    max-messages: 10
+    # Max total characters in one batched Discord message
+    max-combined-length: 1800
+
   # Rich embed settings for creative inventory
   embeds:
     enabled: true
@@ -26,6 +37,38 @@ discord:
 custom-responses:
   enabled: true
 
+  # Suppress normal command logging when a custom response is triggered
+  # This prevents getting two notifications (one custom, one normal) for the same event
+  suppress-normal-logging: false
+
+  # Repeat / burst triggers
+  # Triggers when the same actor repeats a matching command pattern N times within X seconds
+  # Placeholders: %player%, %sender%, %command%, %count%, %interval%, %time%
+  repeat-triggers:
+    enabled: false
+
+    # Player-based repeat triggers
+    player:
+      # Example: alert if someone runs /smg 3 times within 10 seconds
+      - pattern: "smg"
+        count: 3
+        interval-seconds: 10
+        response: "⚠️ **SPAM DETECTED** - %player% repeated /smg %count%x in %interval%s. Last: %command%"
+
+      # Example: alert if large give commands are spammed quickly
+      - pattern: "give * * >=5"
+        count: 3
+        interval-seconds: 15
+        response: "🚨 **BURST GIVE** - %player% repeated high-amount gives %count%x in %interval%s. Last: %command%"
+
+    # Console-based repeat triggers
+    console:
+      # Example: alert if automated task repeatedly runs stop/restart style commands
+      - pattern: "stop"
+        count: 2
+        interval-seconds: 30
+        response: "⚠️ **CONSOLE BURST** - %sender% repeated stop command %count%x in %interval%s"
+
   # Player command responses
   # Use %player%, %command%, %time% placeholders
   player:
@@ -40,10 +83,13 @@ custom-responses:
     # "lp user": "⚠️ **LUCKPERMS** - %player% modified a user at %time%"
     # "lp group": "⚠️ **LUCKPERMS** - %player% modified a group at %time%"
     #
-    # WILDCARD EXAMPLES (* matches any single argument):
+    # WILDCARD & THRESHOLD EXAMPLES:
+    # * matches any single argument
+    # >=X, <=X, >X, <X, ==X matches numbers based on conditions
     # "lp user * permission set *": "🔐 **CRITICAL** - %player% set permission with: %command% at %time%"
     # "lp user * parent add *": "⚠️ **RANK CHANGE** - %player% added rank: %command% at %time%"
     # "ban * *": "🔨 **BAN** - %player% banned someone: %command% at %time%"
+    # "give * * >=5": "⚠️ **LARGE SPAWN** - %player% gave 5+ items! %command% at %time%"
 
   # Console command responses
   # Use %sender%, %command%, %time% placeholders
@@ -163,4 +209,4 @@ general:
   time-format: "yyyy-MM-dd HH:mm:ss"
 
 # Don't change this unless you know what you're doing
-config-version: 1
+config-version: 3

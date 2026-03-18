@@ -75,6 +75,9 @@ public final class AdminWatchdog extends JavaPlugin {
             if (updateChecker != null) {
                 updateChecker.stopUpdateChecker();
             }
+            if (discordManager != null) {
+                discordManager.shutdown();
+            }
             MinecraftApiHelper.shutdown();
             if (configManager != null) {
                 getLogger().info(configManager.getMessage("plugin.disabled"));

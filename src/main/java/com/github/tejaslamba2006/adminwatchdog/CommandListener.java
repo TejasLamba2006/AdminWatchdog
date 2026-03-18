@@ -18,6 +18,8 @@ import org.bukkit.inventory.ItemStack;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,12 +31,14 @@ public class CommandListener implements Listener {
 
     private static final String TIME_PLACEHOLDER = "%time%";
     private static final String PLAYER_PLACEHOLDER = "%player%";
+    private static final String SENDER_PLACEHOLDER = "%sender%";
     private static final String COMMAND_PLACEHOLDER = "%command%";
 
     private final File logFile;
     private final AdminWatchdog plugin;
 
     private final Map<UUID, DroppedItemInfo> trackedCreativeDrops = new ConcurrentHashMap<>();
+    private final Map<String, Deque<Long>> repeatedCommandHistory = new ConcurrentHashMap<>();
 
     public CommandListener(AdminWatchdog plugin) {
         this.plugin = plugin;
@@ -122,9 +126,17 @@ public class CommandListener implements Listener {
 
         String senderName = event.getSender().getName();
         String command = event.getCommand();
+        boolean customResponseTriggered = false;
+        boolean repeatTriggerResponse = false;
 
         if (plugin.getConfigManager().isCustomCommandResponsesEnabled()) {
-            handleCustomConsoleCommandResponse(senderName, "/" + command);
+            customResponseTriggered = handleCustomConsoleCommandResponse(senderName, "/" + command);
+            repeatTriggerResponse = handleRepeatTriggerResponse(senderName, "/" + command, true);
+        }
+
+        if ((customResponseTriggered || repeatTriggerResponse)
+                && plugin.getConfigManager().isSuppressNormalLoggingEnabled()) {
+            return;
         }
 
         if (plugin.getConfigManager().isCommandBlacklisted("/" + command, true)) {
@@ -148,13 +160,21 @@ public class CommandListener implements Listener {
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
         String command = event.getMessage();
+        boolean customResponseTriggered = false;
+        boolean repeatTriggerResponse = false;
 
         if (plugin.getConfigManager().isCustomCommandResponsesEnabled()
                 && !player.hasPermission("adminwatchdog.bypass.customresponses")) {
 
             if (shouldMonitorPlayerForCustomResponses(player)) {
-                handleCustomCommandResponse(player, command);
+                customResponseTriggered = handleCustomCommandResponse(player, command);
+                repeatTriggerResponse = handleRepeatTriggerResponse(player.getName(), command, false);
             }
+        }
+
+        if ((customResponseTriggered || repeatTriggerResponse)
+                && plugin.getConfigManager().isSuppressNormalLoggingEnabled()) {
+            return;
         }
 
         if (plugin.getConfigManager().isCommandBlacklisted(command, false)) {
@@ -190,7 +210,7 @@ public class CommandListener implements Listener {
         return false;
     }
 
-    private void handleCustomCommandResponse(Player player, String command) {
+    private boolean handleCustomCommandResponse(Player player, String command) {
         Map.Entry<String, String> match = plugin.getConfigManager().findMatchingCustomResponse(command, false);
         if (match != null && !match.getValue().isEmpty()) {
             String formattedResponse = match.getValue()
@@ -201,21 +221,76 @@ public class CommandListener implements Listener {
             if (plugin.getConfigManager().isDiscordEnabled()) {
                 plugin.getDiscordManager().sendToDiscord(formattedResponse);
             }
+            return true;
         }
+        return false;
     }
 
-    private void handleCustomConsoleCommandResponse(String senderName, String command) {
+    private boolean handleCustomConsoleCommandResponse(String senderName, String command) {
         Map.Entry<String, String> match = plugin.getConfigManager().findMatchingCustomResponse(command, true);
         if (match != null && !match.getValue().isEmpty()) {
             String formattedResponse = match.getValue()
-                    .replace("%sender%", senderName)
+                    .replace(SENDER_PLACEHOLDER, senderName)
                     .replace(COMMAND_PLACEHOLDER, command)
                     .replace(TIME_PLACEHOLDER, plugin.getConfigManager().getFormattedTime());
 
             if (plugin.getConfigManager().isDiscordEnabled()) {
                 plugin.getDiscordManager().sendToDiscord(formattedResponse);
             }
+            return true;
         }
+        return false;
+    }
+
+    private boolean handleRepeatTriggerResponse(String actorName, String command, boolean isConsole) {
+        if (!plugin.getConfigManager().isRepeatTriggersEnabled()) {
+            return false;
+        }
+
+        for (ConfigManager.RepeatTrigger trigger : plugin.getConfigManager().getRepeatTriggers(isConsole)) {
+            if (!plugin.getConfigManager().doesCommandMatchPattern(command, trigger.pattern())) {
+                continue;
+            }
+
+            String trackerKey = (isConsole ? "console:" : "player:")
+                    + actorName.toLowerCase()
+                    + "|"
+                    + trigger.pattern().toLowerCase();
+
+            Deque<Long> timestamps = repeatedCommandHistory.computeIfAbsent(trackerKey, ignored -> new ArrayDeque<>());
+            long now = System.currentTimeMillis();
+            long oldestAllowed = now - TimeUnit.SECONDS.toMillis(trigger.intervalSeconds());
+
+            synchronized (timestamps) {
+                while (!timestamps.isEmpty() && timestamps.peekFirst() < oldestAllowed) {
+                    timestamps.pollFirst();
+                }
+
+                timestamps.addLast(now);
+
+                if (timestamps.size() < trigger.count()) {
+                    continue;
+                }
+
+                timestamps.clear();
+            }
+
+            String formattedResponse = trigger.response()
+                    .replace(PLAYER_PLACEHOLDER, actorName)
+                    .replace(SENDER_PLACEHOLDER, actorName)
+                    .replace(COMMAND_PLACEHOLDER, command)
+                    .replace("%count%", String.valueOf(trigger.count()))
+                    .replace("%interval%", String.valueOf(trigger.intervalSeconds()))
+                    .replace(TIME_PLACEHOLDER, plugin.getConfigManager().getFormattedTime());
+
+            if (plugin.getConfigManager().isDiscordEnabled()) {
+                plugin.getDiscordManager().sendToDiscord(formattedResponse);
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private MonitoringResult shouldMonitorPlayer(Player player) {

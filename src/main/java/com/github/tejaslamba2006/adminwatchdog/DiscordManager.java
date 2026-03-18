@@ -10,8 +10,12 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import org.bukkit.scheduler.BukkitTask;
 
 public final class DiscordManager {
 
@@ -24,54 +28,150 @@ public final class DiscordManager {
 
     private final AdminWatchdog plugin;
     private final MinecraftApiHelper apiHelper;
+    private final ConcurrentLinkedQueue<String> batchedMessages = new ConcurrentLinkedQueue<>();
+    private final AtomicBoolean flushingBatch = new AtomicBoolean(false);
+    private BukkitTask batchFlushTask;
 
     public DiscordManager(AdminWatchdog plugin) {
         this.plugin = plugin;
         this.apiHelper = new MinecraftApiHelper();
+        startBatchingTaskIfEnabled();
     }
 
     public void sendToDiscord(String message) {
-        CompletableFuture.runAsync(() -> {
-            if (!plugin.getConfigManager().isDiscordEnabled())
-                return;
+        if (!plugin.getConfigManager().isDiscordEnabled()) {
+            return;
+        }
 
-            String webhookUrl = plugin.getConfigManager().getWebhookUrl();
-            if (webhookUrl == null || webhookUrl.isEmpty()) {
-                plugin.getLogger().warning(plugin.getConfigManager().getMessage("errors.webhook-not-set"));
-                return;
+        if (plugin.getConfigManager().isDiscordBatchingEnabled()) {
+            batchedMessages.offer(message);
+
+            int maxBatchMessages = plugin.getConfigManager().getDiscordBatchMaxMessages();
+            if (batchedMessages.size() >= maxBatchMessages) {
+                CompletableFuture.runAsync(this::flushBatchedMessages);
+            }
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> sendContentToDiscord(message));
+    }
+
+    private void sendContentToDiscord(String message) {
+        if (!plugin.getConfigManager().isDiscordEnabled()) {
+            return;
+        }
+
+        String webhookUrl = plugin.getConfigManager().getWebhookUrl();
+        if (webhookUrl == null || webhookUrl.isEmpty()) {
+            plugin.getLogger().warning(plugin.getConfigManager().getMessage("errors.webhook-not-set"));
+            return;
+        }
+
+        try {
+            URL url = URI.create(webhookUrl).toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "application/json");
+
+            String jsonPayload = String.format(
+                    "{\"content\":\"%s\",\"allowed_mentions\":{\"parse\":[\"users\",\"roles\",\"everyone\"]}}",
+                    safeJsonString(message));
+
+            try (OutputStream os = connection.getOutputStream()) {
+                os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));
+                os.flush();
             }
 
-            try {
-                URL url = URI.create(webhookUrl).toURL();
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-                connection.setRequestMethod("POST");
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type", "application/json");
-
-                
-                String jsonPayload = String.format(
-                        "{\"content\":\"%s\",\"allowed_mentions\":{\"parse\":[\"users\",\"roles\",\"everyone\"]}}",
-                        safeJsonString(message));
-
-                try (OutputStream os = connection.getOutputStream()) {
-                    os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));
-                    os.flush();
-                }
-
-                int responseCode = connection.getResponseCode();
-                if (responseCode != 204) {
-                    String errorMessage = plugin.getConfigManager().getMessage("errors.webhook-failed", "%code%",
-                            String.valueOf(responseCode));
-                    plugin.getLogger().warning(errorMessage);
-                }
-
-            } catch (Exception e) {
-                if (plugin.getConfigManager().isDebugEnabled()) {
-                    e.printStackTrace();
-                }
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 204) {
+                String errorMessage = plugin.getConfigManager().getMessage("errors.webhook-failed", "%code%",
+                        String.valueOf(responseCode));
+                plugin.getLogger().warning(errorMessage);
             }
-        });
+
+        } catch (Exception e) {
+            if (plugin.getConfigManager().isDebugEnabled()) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void startBatchingTaskIfEnabled() {
+        if (!plugin.getConfigManager().isDiscordBatchingEnabled()) {
+            return;
+        }
+
+        long intervalMillis = plugin.getConfigManager().getDiscordBatchIntervalMs();
+        long intervalTicks = Math.max(1L, intervalMillis / 50L);
+
+        batchFlushTask = plugin.getServer().getScheduler().runTaskTimerAsynchronously(
+                plugin,
+                this::flushBatchedMessages,
+                intervalTicks,
+                intervalTicks);
+    }
+
+    private void flushBatchedMessages() {
+        if (!plugin.getConfigManager().isDiscordBatchingEnabled()) {
+            return;
+        }
+
+        if (!flushingBatch.compareAndSet(false, true)) {
+            return;
+        }
+
+        try {
+            String nextBatch;
+            while ((nextBatch = buildNextBatchMessage()) != null) {
+                sendContentToDiscord(nextBatch);
+            }
+        } finally {
+            flushingBatch.set(false);
+        }
+    }
+
+    private String buildNextBatchMessage() {
+        String firstMessage = batchedMessages.poll();
+        if (firstMessage == null) {
+            return null;
+        }
+
+        int maxBatchMessages = plugin.getConfigManager().getDiscordBatchMaxMessages();
+        int maxCombinedLength = plugin.getConfigManager().getDiscordBatchMaxCombinedLength();
+
+        StringBuilder combined = new StringBuilder(firstMessage);
+        int messagesAdded = 1;
+
+        while (messagesAdded < maxBatchMessages) {
+            String nextMessage = batchedMessages.peek();
+            if (nextMessage == null) {
+                break;
+            }
+
+            int nextLength = combined.length() + 1 + nextMessage.length();
+            if (nextLength > maxCombinedLength) {
+                break;
+            }
+
+            batchedMessages.poll();
+            combined.append('\n').append(nextMessage);
+            messagesAdded++;
+        }
+
+        return combined.toString();
+    }
+
+    public void shutdown() {
+        if (batchFlushTask != null) {
+            batchFlushTask.cancel();
+            batchFlushTask = null;
+        }
+
+        if (!batchedMessages.isEmpty()) {
+            flushBatchedMessages();
+        }
     }
 
     public void sendGamemodeChange(String playerName, String oldMode, String newMode) {
