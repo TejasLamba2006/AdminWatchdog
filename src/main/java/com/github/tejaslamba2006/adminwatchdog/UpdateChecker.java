@@ -3,7 +3,6 @@ package com.github.tejaslamba2006.adminwatchdog;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
@@ -86,12 +85,12 @@ public final class UpdateChecker {
                 this.latestVersion = result.getLatestVersion();
                 this.downloadUrl = result.getDownloadUrl();
 
-                plugin.getLogger().info("§e═══════════════════════════════════");
-                plugin.getLogger().info("§e    UPDATE AVAILABLE!");
-                plugin.getLogger().info("§e    Current: " + currentVersion);
-                plugin.getLogger().info("§e    Latest: " + latestVersion);
-                plugin.getLogger().info("§e    Download: " + downloadUrl);
-                plugin.getLogger().info("§e═══════════════════════════════════");
+                plugin.getLogger().info("===================================");
+                plugin.getLogger().info("UPDATE AVAILABLE!");
+                plugin.getLogger().info("Current: " + currentVersion);
+                plugin.getLogger().info("Latest: " + latestVersion);
+                plugin.getLogger().info("Download: " + downloadUrl);
+                plugin.getLogger().info("===================================");
 
                 Bukkit.getScheduler().runTask(plugin, this::notifyAdministrators);
 
@@ -185,7 +184,7 @@ public final class UpdateChecker {
                 "%latest%", latestVersion,
                 "%download%", downloadUrl);
 
-        Component component = MiniMessage.miniMessage().deserialize(message);
+        Component component = plugin.getConfigManager().deserializeConfiguredMessage(message);
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (player.hasPermission("adminwatchdog.update.notify")) {

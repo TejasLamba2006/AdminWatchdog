@@ -69,6 +69,49 @@ custom-responses:
         interval-seconds: 30
         response: "⚠️ **CONSOLE BURST** - %sender% repeated stop command %count%x in %interval%s"
 
+  # Creative lore triggers
+  # Sends extra warning messages when creative-tracked items have lore matching configured patterns.
+  # This does NOT replace normal creative logs; it adds an additional alert.
+  # Placeholders:
+  # %player% - actor being logged (picker on pickup, dropper on drop, taker on inventory)
+  # %other_player% - related actor (dropper for pickup, same as %player% otherwise)
+  # %item%, %material%, %amount%, %matched_lore%, %lore_pattern%, %creative_action%, %time%
+  creative-lore-triggers:
+    enabled: false
+    # Also append lore-trigger warnings to the local log file when file logging is enabled
+    write-to-log: true
+    # Strip legacy Minecraft color formatting codes before matching lore patterns
+    strip-color-codes: true
+    triggers:
+      - pattern: "duped"
+        case-sensitive: false
+        response: "🚨 **CREATIVE LORE ALERT** - %player% %creative_action% %amount%x %item% (%material%). Lore matched `%matched_lore%` (pattern `%lore_pattern%`) at %time%"
+
+      - pattern: "*ADMIN ONLY*"
+        case-sensitive: false
+        response: "⚠️ **SPECIAL LORE ITEM** - %player% handled %item% during %creative_action%. Related player: %other_player%. Matched: `%matched_lore%`"
+
+  # Creative material triggers
+  # Sends extra warning messages when creative-tracked items match configured material patterns.
+  # This works even if items have no lore (useful for vanilla materials like DIAMOND_BLOCK).
+  # Pattern supports wildcard * and can be case-insensitive.
+  # Placeholders:
+  # %player% - actor being logged (picker on pickup, dropper on drop, taker on inventory)
+  # %other_player% - related actor (dropper for pickup, same as %player% otherwise)
+  # %item%, %material%, %amount%, %matched_material%, %material_pattern%, %creative_action%, %time%
+  creative-material-triggers:
+    enabled: false
+    # Also append material-trigger warnings to the local log file when file logging is enabled
+    write-to-log: true
+    triggers:
+      - pattern: "DIAMOND_BLOCK"
+        case-sensitive: false
+        response: "🚨 **CREATIVE MATERIAL ALERT** - %player% %creative_action% %amount%x %item% (%material%) at %time%"
+
+      - pattern: "TRIPWIRE_HOOK"
+        case-sensitive: false
+        response: "🔑 **KEY MATERIAL ALERT** - %player% handled key-like material %material% during %creative_action%. Related: %other_player%"
+
   # Player command responses
   # Use %player%, %command%, %time% placeholders
   player:
@@ -203,10 +246,10 @@ general:
   debug: false
 
   # Plugin prefix for messages
-  prefix: "&7[&6AdminWatchdog&7]&r "
+  prefix: "<gray>[<gold>AdminWatchdog</gold>]</gray> "
 
   # Date/time format for logs
   time-format: "yyyy-MM-dd HH:mm:ss"
 
 # Don't change this unless you know what you're doing
-config-version: 3
+config-version: 5

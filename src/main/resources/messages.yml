@@ -1,60 +1,64 @@
-# AdminWatchdog messages configuration
-# All plugin messages are configurable here
-# Placeholders: %player%, %command%, %oldmode%, %newmode%, %time%, %sender%
+# AdminWatchdog message templates
+# You can edit any value below.
+# Keep placeholder tokens exactly as they are.
+# Common placeholders: %player%, %command%, %oldmode%, %newmode%, %time%, %sender%
 
-# Plugin startup/shutdown messages
+# Plugin startup and shutdown
 plugin:
-  enabled: "AdminWatchdog is active"
-  disabled: "AdminWatchdog is inactive"
+  enabled: "AdminWatchdog is now running."
+  disabled: "AdminWatchdog has been stopped."
 
-# Command messages
+# Command feedback
 commands:
-  usage: "Usage: /adminwatchdog <version|v|ver|reload>"
-  version: "AdminWatchdog plugin version: %version%"
-  reload-success: "AdminWatchdog configuration reloaded successfully"
-  reload-failed: "Failed to reload AdminWatchdog configuration"
-  no-permission: "You don't have permission to use this command"
+  usage: "Usage: /adminwatchdog <version|v|ver|reload|update|checkupdate>"
+  version: "AdminWatchdog version: %version%"
+  reload-success: "Configuration reloaded."
+  reload-failed: "Could not reload the configuration."
+  no-permission: "You do not have permission to run that command."
 
-# Log format messages
+# Local log output
 logging:
-  gamemode-change: "[%time%] [OP] %player%: switched gamemode from %oldmode% to %newmode%"
-  console-command: "[%time%] [CONSOLE] %sender%: /%command%"
-  player-command: "[%time%] %prefix%%player%: %command%"
-  permission-command: "[%time%] [PERM] %player%: %command%"
-  creative-inventory: "[%time%] %prefix%%player%: took %amount%x %item% from creative inventory"
-  creative-inventory-detailed: "[%time%] %prefix%%player%: took %amount%x %item% (%material%) from creative inventory"
-  creative-item-drop: "[%time%] %player%: dropped %amount%x %item% (%material%) from creative mode"
-  creative-item-pickup: "[%time%] %picker%: picked up %amount%x %item% (%material%) originally dropped by %dropper%"
+  gamemode-change: "[%time%] [OP] %player% changed gamemode from %oldmode% to %newmode%"
+  console-command: "[%time%] [CONSOLE] %sender% ran /%command%"
+  player-command: "[%time%] %prefix%%player% ran %command%"
+  permission-command: "[%time%] [PERM] %player% ran %command%"
+  creative-inventory: "[%time%] %prefix%%player% took %amount%x %item% from creative inventory"
+  creative-inventory-detailed: "[%time%] %prefix%%player% took %amount%x %item% (%material%) from creative inventory"
+  creative-item-drop: "[%time%] %player% dropped %amount%x %item% (%material%) from creative mode"
+  creative-item-pickup: "[%time%] %picker% picked up %amount%x %item% (%material%) originally dropped by %dropper%"
+  creative-lore-trigger: "[%time%] [LORE-TRIGGER] %player% (%creative_action%) %amount%x %item% (%material%) matched lore '%matched_lore%' from pattern '%lore_pattern%' related='%other_player%'"
+  creative-material-trigger: "[%time%] [MATERIAL-TRIGGER] %player% (%creative_action%) %amount%x %item% (%material%) matched material '%matched_material%' from pattern '%material_pattern%' related='%other_player%'"
 
 # Discord webhook messages
 discord:
-  gamemode-change: "🎮 **%player%** switched gamemode from **%oldmode%** to **%newmode%**"
-  console-command: "🖥️ **Console** executed: `/%command%`"
-  player-command: "👤 **%player%** executed: `%command%`"
-  permission-command: "🔑 **%player%** (with permission) executed: `%command%`"
-  creative-inventory: "🎨 **%player%** took **%amount%x %item%** from creative inventory"
-  creative-inventory-detailed: "🎨 **%player%** took **%amount%x %item%** (%material%) from creative inventory"
-  creative-item-drop: "📦 **%player%** dropped **%amount%x %item%** from creative mode"
-  creative-item-pickup: "⚠️ **%picker%** picked up **%amount%x %item%** (originally dropped by **%dropper%**)"
-  update-available: "🔄 **AdminWatchdog update available** Current: %current% → Latest: %latest% | Download: %download%"
+  gamemode-change: "**%player%** changed gamemode from **%oldmode%** to **%newmode%**"
+  console-command: "**Console** ran `/%command%`"
+  player-command: "**%player%** ran `%command%`"
+  permission-command: "**%player%** (permission match) ran `%command%`"
+  creative-inventory: "**%player%** took **%amount%x %item%** from creative inventory"
+  creative-inventory-detailed: "**%player%** took **%amount%x %item%** (%material%) from creative inventory"
+  creative-item-drop: "**%player%** dropped **%amount%x %item%** from creative mode"
+  creative-item-pickup: "**%picker%** picked up **%amount%x %item%** (dropped by **%dropper%**)"
+  update-available: "**AdminWatchdog update available** Current: %current% | Latest: %latest% | Download: %download%"
 
 # Update checker messages
 update:
-  notification: "&e&l[UPDATE] &eAdminWatchdog %latest% is available. You are using %current%. Download: &b%download%"
-  check-start: "Checking for updates..."
-  check-success: "Update check completed. Current version: %current%, Latest: %latest%"
-  check-failed: "Failed to check for updates: %error%"
-  up-to-date: "You are using the latest version (%current%)"
-  available: "Update available: %current% → %latest%"
+  notification: "<yellow><bold>Update available:</bold> AdminWatchdog <white>%latest%</white> is out. You are on <white>%current%</white>. Download: <aqua>%download%</aqua></yellow>"
+  check-start: "Checking for updates now..."
+  check-success: "Update check complete. Current: %current% | Latest: %latest%"
+  check-failed: "Update check failed: %error%"
+  up-to-date: "You are already on the latest version (%current%)."
+  available: "Update found: %current% -> %latest%"
+  download: "<aqua>Download: <click:open_url:'%download%'><underlined>%download%</underlined></click></aqua>"
 
 # Error messages
 errors:
-  webhook-not-set: "Webhook URL is not set in config.yml"
-  webhook-failed: "Failed to send webhook: HTTP %code%"
-  log-file-creation-failed: "Failed to create log file"
-  config-load-failed: "Failed to load configuration file: %file%"
+  webhook-not-set: "Webhook URL is missing in config.yml"
+  webhook-failed: "Webhook request failed (HTTP %code%)"
+  log-file-creation-failed: "Could not create the log file"
+  config-load-failed: "Could not load configuration file: %file%"
 
-# Prefixes for different user types
+# Prefixes by monitored user type
 prefixes:
   op: "[OP] "
   permission: "[PERM] "

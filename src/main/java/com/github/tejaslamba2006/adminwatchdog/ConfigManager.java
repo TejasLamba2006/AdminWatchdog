@@ -1,5 +1,7 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -18,10 +20,11 @@ import java.util.regex.Pattern;
 
 public class ConfigManager {
 
-    private static final int CURRENT_CONFIG_VERSION = 3;
+    private static final int CURRENT_CONFIG_VERSION = 5;
     private static final String CONFIG_VERSION_KEY = "config-version";
 
     private final AdminWatchdog plugin;
+    private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private FileConfiguration messagesConfig;
     private File messagesFile;
 
@@ -121,6 +124,19 @@ public class ConfigManager {
             }
         }
         return message;
+    }
+
+    public Component getMessageComponent(String path, String... placeholders) {
+        String message = getMessage(path, placeholders);
+        return deserializeConfiguredMessage(message);
+    }
+
+    public Component deserializeConfiguredMessage(String message) {
+        if (message == null || message.isEmpty()) {
+            return Component.empty();
+        }
+
+        return miniMessage.deserialize(message);
     }
 
     public String getFormattedTime() {
@@ -444,6 +460,132 @@ public class ConfigManager {
         return plugin.getConfig().getBoolean("custom-responses.suppress-normal-logging", false);
     }
 
+    public boolean isCreativeLoreTriggersEnabled() {
+        return plugin.getConfig().getBoolean("custom-responses.creative-lore-triggers.enabled", false);
+    }
+
+    public boolean isCreativeLoreTriggersWriteToLog() {
+        return plugin.getConfig().getBoolean("custom-responses.creative-lore-triggers.write-to-log", true);
+    }
+
+    public boolean isCreativeLoreTriggersStripColorCodes() {
+        return plugin.getConfig().getBoolean("custom-responses.creative-lore-triggers.strip-color-codes", true);
+    }
+
+    public List<CreativeLoreTrigger> getCreativeLoreTriggers() {
+        if (!isCreativeLoreTriggersEnabled()) {
+            return List.of();
+        }
+
+        List<Map<?, ?>> rawTriggers = plugin.getConfig().getMapList("custom-responses.creative-lore-triggers.triggers");
+        List<CreativeLoreTrigger> parsedTriggers = new ArrayList<>();
+
+        for (Map<?, ?> rawTrigger : rawTriggers) {
+            Object patternRaw = rawTrigger.containsKey("pattern") ? rawTrigger.get("pattern") : "";
+            Object responseRaw = rawTrigger.containsKey("response") ? rawTrigger.get("response") : "";
+
+            String pattern = String.valueOf(patternRaw).trim();
+            String response = String.valueOf(responseRaw).trim();
+            boolean caseSensitive = parseBoolean(rawTrigger.get("case-sensitive"), false);
+
+            if (pattern.isEmpty() || response.isEmpty()) {
+                continue;
+            }
+
+            parsedTriggers.add(new CreativeLoreTrigger(pattern, caseSensitive, response));
+        }
+
+        return parsedTriggers;
+    }
+
+    public boolean doesLoreMatchPattern(String loreLine, String pattern, boolean caseSensitive,
+            boolean stripColorCodes) {
+        if (loreLine == null || pattern == null || pattern.trim().isEmpty()) {
+            return false;
+        }
+
+        String normalizedLore = normalizeLoreText(loreLine, stripColorCodes);
+        String normalizedPattern = normalizeLoreText(pattern, stripColorCodes);
+
+        if (normalizedLore.isEmpty() || normalizedPattern.isEmpty()) {
+            return false;
+        }
+
+        if (normalizedPattern.contains("*")) {
+            int flags = caseSensitive ? 0 : Pattern.CASE_INSENSITIVE;
+            String regex = Pattern.quote(normalizedPattern).replace("*", "\\E.*\\Q");
+            return Pattern.compile(regex, flags).matcher(normalizedLore).find();
+        }
+
+        if (caseSensitive) {
+            return normalizedLore.contains(normalizedPattern);
+        }
+
+        return normalizedLore.toLowerCase().contains(normalizedPattern.toLowerCase());
+    }
+
+    public boolean isCreativeMaterialTriggersEnabled() {
+        return plugin.getConfig().getBoolean("custom-responses.creative-material-triggers.enabled", false);
+    }
+
+    public boolean isCreativeMaterialTriggersWriteToLog() {
+        return plugin.getConfig().getBoolean("custom-responses.creative-material-triggers.write-to-log", true);
+    }
+
+    public List<CreativeMaterialTrigger> getCreativeMaterialTriggers() {
+        if (!isCreativeMaterialTriggersEnabled()) {
+            return List.of();
+        }
+
+        List<Map<?, ?>> rawTriggers = plugin.getConfig().getMapList("custom-responses.creative-material-triggers.triggers");
+        List<CreativeMaterialTrigger> parsedTriggers = new ArrayList<>();
+
+        for (Map<?, ?> rawTrigger : rawTriggers) {
+            Object patternRaw = rawTrigger.containsKey("pattern")
+                    ? rawTrigger.get("pattern")
+                    : rawTrigger.get("material");
+            Object responseRaw = rawTrigger.containsKey("response") ? rawTrigger.get("response") : "";
+
+            String pattern = patternRaw == null ? "" : String.valueOf(patternRaw).trim();
+            String response = String.valueOf(responseRaw).trim();
+            boolean caseSensitive = parseBoolean(rawTrigger.get("case-sensitive"), false);
+
+            if (pattern.isEmpty() || response.isEmpty()) {
+                continue;
+            }
+
+            parsedTriggers.add(new CreativeMaterialTrigger(pattern, caseSensitive, response));
+        }
+
+        return parsedTriggers;
+    }
+
+    public boolean doesMaterialMatchPattern(String materialName, String pattern, boolean caseSensitive) {
+        if (materialName == null || pattern == null || pattern.trim().isEmpty()) {
+            return false;
+        }
+
+        String normalizedMaterial = materialName.trim();
+        String normalizedPattern = pattern.trim();
+
+        if (normalizedMaterial.isEmpty() || normalizedPattern.isEmpty()) {
+            return false;
+        }
+
+        if (normalizedPattern.contains("*")) {
+            int flags = caseSensitive ? 0 : Pattern.CASE_INSENSITIVE;
+            String wildcardPattern = Pattern.quote(normalizedPattern).replace("*", "\\E.*\\Q");
+            String regex = "^" + wildcardPattern + "$";
+            return Pattern.compile(regex, flags).matcher(normalizedMaterial).matches();
+        }
+
+        if (caseSensitive) {
+            return normalizedMaterial.equals(normalizedPattern);
+        }
+
+        return normalizedMaterial.equalsIgnoreCase(normalizedPattern);
+    }
+
     public boolean isRepeatTriggersEnabled() {
         return plugin.getConfig().getBoolean("custom-responses.repeat-triggers.enabled", false);
     }
@@ -500,6 +642,44 @@ public class ConfigManager {
         return defaultValue;
     }
 
+    private boolean parseBoolean(Object rawValue, boolean defaultValue) {
+        if (rawValue instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+
+        if (rawValue instanceof Number numberValue) {
+            return numberValue.intValue() != 0;
+        }
+
+        if (rawValue instanceof String stringValue) {
+            if (stringValue.equalsIgnoreCase("true")) {
+                return true;
+            }
+            if (stringValue.equalsIgnoreCase("false")) {
+                return false;
+            }
+        }
+
+        return defaultValue;
+    }
+
+    private String normalizeLoreText(String value, boolean stripColorCodes) {
+        String normalized = value.trim();
+        if (!stripColorCodes || normalized.isEmpty()) {
+            return normalized;
+        }
+
+        return normalized
+                .replaceAll("(?i)&[0-9A-FK-ORX]", "")
+            .replaceAll("(?i)\\u00A7[0-9A-FK-ORX]", "");
+    }
+
     public record RepeatTrigger(String pattern, int count, int intervalSeconds, String response) {
+    }
+
+    public record CreativeLoreTrigger(String pattern, boolean caseSensitive, String response) {
+    }
+
+    public record CreativeMaterialTrigger(String pattern, boolean caseSensitive, String response) {
     }
 }

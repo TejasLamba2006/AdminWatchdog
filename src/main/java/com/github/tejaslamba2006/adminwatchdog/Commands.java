@@ -25,7 +25,7 @@ public final class Commands implements TabExecutor {
             @NotNull String[] args) {
 
         if (args.length == 0) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("commands.usage"));
+            sender.sendMessage(plugin.getConfigManager().getMessageComponent("commands.usage"));
             return true;
         }
 
@@ -34,53 +34,56 @@ public final class Commands implements TabExecutor {
         switch (subcommand) {
             case "version", "v", "ver" -> {
                 String version = plugin.getPluginMeta().getVersion();
-                String message = plugin.getConfigManager().getMessage("commands.version", "%version%", version);
-                sender.sendMessage(message);
+                sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                        "commands.version",
+                        "%version%", version));
                 return true;
             }
             case "reload", "rl" -> {
                 if (!sender.hasPermission("adminwatchdog.reload")) {
-                    sender.sendMessage(plugin.getConfigManager().getMessage("commands.no-permission"));
+                    sender.sendMessage(plugin.getConfigManager().getMessageComponent("commands.no-permission"));
                     return true;
                 }
 
                 try {
                     plugin.getConfigManager().reloadConfigs();
-                    sender.sendMessage(plugin.getConfigManager().getMessage("commands.reload-success"));
+                    sender.sendMessage(plugin.getConfigManager().getMessageComponent("commands.reload-success"));
                 } catch (Exception e) {
-                    sender.sendMessage(plugin.getConfigManager().getMessage("commands.reload-failed"));
+                    sender.sendMessage(plugin.getConfigManager().getMessageComponent("commands.reload-failed"));
                     plugin.getLogger().severe("Error reloading config: " + e.getMessage());
                 }
                 return true;
             }
             case "update", "checkupdate" -> {
                 if (!sender.hasPermission("adminwatchdog.update.check")) {
-                    sender.sendMessage(plugin.getConfigManager().getMessage("commands.no-permission"));
+                    sender.sendMessage(plugin.getConfigManager().getMessageComponent("commands.no-permission"));
                     return true;
                 }
 
-                sender.sendMessage(plugin.getConfigManager().getMessage("update.check-start"));
+                sender.sendMessage(plugin.getConfigManager().getMessageComponent("update.check-start"));
 
                 plugin.getUpdateChecker().checkForUpdatesSync().thenAccept(result -> {
                     if (result.hasError()) {
-                        String message = plugin.getConfigManager().getMessage("update.check-failed", "%error%",
-                                result.getError());
-                        sender.sendMessage(message);
+                        sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                                "update.check-failed",
+                                "%error%", result.getError()));
                     } else if (result.isUpdateAvailable()) {
-                        String message = plugin.getConfigManager().getMessage("update.available",
+                        sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                                "update.available",
                                 "%current%", result.getCurrentVersion(),
-                                "%latest%", result.getLatestVersion());
-                        sender.sendMessage(message);
-                        sender.sendMessage("Download: " + result.getDownloadUrl());
+                                "%latest%", result.getLatestVersion()));
+                        sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                                "update.download",
+                                "%download%", result.getDownloadUrl()));
                     } else {
-                        String message = plugin.getConfigManager().getMessage("update.up-to-date", "%current%",
-                                result.getCurrentVersion());
-                        sender.sendMessage(message);
+                        sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                                "update.up-to-date",
+                                "%current%", result.getCurrentVersion()));
                     }
                 }).exceptionally(ex -> {
-                    String message = plugin.getConfigManager().getMessage("update.check-failed", "%error%",
-                            ex.getMessage());
-                    sender.sendMessage(message);
+                    sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                            "update.check-failed",
+                            "%error%", ex.getMessage()));
                     return null;
                 });
 

@@ -2,6 +2,28 @@
 
 All notable changes to AdminWatchdog will be documented in this file.
 
+## [1.4.1] - 2026-04-08
+
+This update is mostly about clarity. The plugin behavior stays familiar, but the text around it should feel easier to read and edit when you are moving fast.
+
+### Added
+
+- Creative material triggers for creative inventory, drop, and pickup events.
+- New placeholders for material-trigger messages: `%matched_material%` and `%material_pattern%`.
+- Dedicated update download message template for command output.
+
+### Changed
+
+- Player-facing message rendering now uses MiniMessage.
+- `config.yml` comments and user-facing response strings were rewritten in a more natural tone.
+- `messages.yml` comments and message strings were rewritten to be clearer and less robotic.
+- Legacy section-sign formatting in update logs was removed.
+
+### Notes
+
+- Key names and configuration structure were not changed.
+- If your existing custom messages still use legacy color codes, convert them to MiniMessage tags.
+
 ## [1.4.0] - 2026-03-18
 
 This release is focused on real-world moderation load: fewer duplicate pings, better abuse detection, and less webhook spam when people start command-flooding.
@@ -15,11 +37,11 @@ This release is focused on real-world moderation load: fewer duplicate pings, be
 ### Changed
 
 - Custom responses are now split cleanly into:
- 	- `custom-responses.player`
- 	- `custom-responses.console`
+  - `custom-responses.player`
+  - `custom-responses.console`
 - Command blacklist is now split too:
- 	- `monitoring.command-blacklist.player`
- 	- `monitoring.command-blacklist.console`
+  - `monitoring.command-blacklist.player`
+  - `monitoring.command-blacklist.console`
 - Added `custom-responses.suppress-normal-logging` so you can avoid duplicate log lines when a custom alert already fired.
 - Pattern matching now accepts config keys with or without leading `/`.
 
@@ -73,7 +95,7 @@ discord:
 ### Notes
 
 - If you want only alert messages and no duplicate normal command logs, set:
- 	- `custom-responses.suppress-normal-logging: true`
+  - `custom-responses.suppress-normal-logging: true`
 - For key-give monitoring, pair threshold patterns with repeat triggers to catch both suspicious amount and suspicious frequency.
 
 ## [1.3] - 2026-02-13

@@ -457,7 +457,7 @@ public final class DiscordManager {
                 .replace("\b", "\\b")
                 .replace("\f", "\\f")
                 .replaceAll("[\u0000-\u001F\u007F-\u009F]", "")
-                .replaceAll("§[0-9a-fk-or]", "");
+            .replaceAll("\\u00A7[0-9a-fk-or]", "");
     }
 
     private String safeJsonString(String text) {

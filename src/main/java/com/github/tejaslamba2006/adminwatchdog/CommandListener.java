@@ -1,5 +1,6 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Item;
@@ -19,6 +20,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,17 @@ public class CommandListener implements Listener {
     private static final String PLAYER_PLACEHOLDER = "%player%";
     private static final String SENDER_PLACEHOLDER = "%sender%";
     private static final String COMMAND_PLACEHOLDER = "%command%";
+    private static final String ITEM_PLACEHOLDER = "%item%";
+    private static final String MATERIAL_PLACEHOLDER = "%material%";
+    private static final String AMOUNT_PLACEHOLDER = "%amount%";
+    private static final String OTHER_PLAYER_PLACEHOLDER = "%other_player%";
+    private static final String MATCHED_LORE_PLACEHOLDER = "%matched_lore%";
+    private static final String LORE_PATTERN_PLACEHOLDER = "%lore_pattern%";
+    private static final String MATCHED_MATERIAL_PLACEHOLDER = "%matched_material%";
+    private static final String MATERIAL_PATTERN_PLACEHOLDER = "%material_pattern%";
+    private static final String CREATIVE_ACTION_PLACEHOLDER = "%creative_action%";
+    private static final String LORE_TRIGGER_LOG_PREFIX = "[LORE-TRIGGER] ";
+    private static final String MATERIAL_TRIGGER_LOG_PREFIX = "[MATERIAL-TRIGGER] ";
 
     private final File logFile;
     private final AdminWatchdog plugin;
@@ -423,22 +436,223 @@ public class CommandListener implements Listener {
                 TIME_PLACEHOLDER, time,
                 "%prefix%", prefix,
                 PLAYER_PLACEHOLDER, playerName,
-                "%amount%", String.valueOf(amount),
-                "%item%", itemName,
-                "%material%", materialName);
+                AMOUNT_PLACEHOLDER, String.valueOf(amount),
+                ITEM_PLACEHOLDER, itemName,
+                MATERIAL_PLACEHOLDER, materialName);
 
         plugin.getDiscordManager().sendCreativeInventoryAction(playerName, item);
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
+
+        handleCreativeLoreTriggers(playerName, playerName, "inventory-take", item);
+        handleCreativeMaterialTriggers(playerName, playerName, "inventory-take", item);
     }
 
     private String getItemDisplayName(ItemStack item) {
         if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-            return item.getItemMeta().displayName().toString();
+            try {
+                return PlainTextComponentSerializer.plainText().serialize(item.getItemMeta().displayName()).trim();
+            } catch (Exception ignored) {
+            }
         }
         return item.getType().name().toLowerCase().replace('_', ' ');
+    }
+
+    private List<String> getItemLore(ItemStack item) {
+        try {
+            if (!item.hasItemMeta() || !item.getItemMeta().hasLore()) {
+                return List.of();
+            }
+
+            List<String> lore = new ArrayList<>();
+            for (var component : item.getItemMeta().lore()) {
+                try {
+                    String line = PlainTextComponentSerializer.plainText().serialize(component).trim();
+                    if (!line.isEmpty()) {
+                        lore.add(line);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            return lore;
+        } catch (Exception e) {
+            if (plugin.getConfigManager().isDebugEnabled()) {
+                plugin.getLogger().warning("Failed reading item lore: " + e.getMessage());
+            }
+            return List.of();
+        }
+    }
+
+    private void handleCreativeLoreTriggers(String playerName, String otherPlayerName, String creativeAction,
+            ItemStack item) {
+        if (!plugin.getConfigManager().isCreativeLoreTriggersEnabled()) {
+            return;
+        }
+
+        MatchedLoreTrigger matched = findCreativeLoreTrigger(item);
+        if (matched == null) {
+            return;
+        }
+
+        String itemName = getItemDisplayName(item);
+        String materialName = item.getType().name();
+        String amount = String.valueOf(item.getAmount());
+        String time = plugin.getConfigManager().getFormattedTime();
+
+        String response = matched.trigger().response()
+                .replace(TIME_PLACEHOLDER, time)
+                .replace(PLAYER_PLACEHOLDER, playerName)
+                .replace(OTHER_PLAYER_PLACEHOLDER, otherPlayerName)
+                .replace(ITEM_PLACEHOLDER, itemName)
+                .replace(MATERIAL_PLACEHOLDER, materialName)
+                .replace(AMOUNT_PLACEHOLDER, amount)
+                .replace(MATCHED_LORE_PLACEHOLDER, matched.matchedLoreLine())
+                .replace(LORE_PATTERN_PLACEHOLDER, matched.trigger().pattern())
+                .replace(CREATIVE_ACTION_PLACEHOLDER, creativeAction);
+
+        plugin.getDiscordManager().sendToDiscord(response);
+        plugin.getLogger().warning(LORE_TRIGGER_LOG_PREFIX + response);
+
+        if (plugin.getConfigManager().isCreativeLoreTriggersWriteToLog()
+                && plugin.getConfigManager().isFileLoggingEnabled()) {
+            String triggerLogEntry = plugin.getConfigManager().getMessage("logging.creative-lore-trigger",
+                    TIME_PLACEHOLDER, time,
+                    PLAYER_PLACEHOLDER, playerName,
+                    OTHER_PLAYER_PLACEHOLDER, otherPlayerName,
+                    ITEM_PLACEHOLDER, itemName,
+                    MATERIAL_PLACEHOLDER, materialName,
+                    AMOUNT_PLACEHOLDER, amount,
+                    MATCHED_LORE_PLACEHOLDER, matched.matchedLoreLine(),
+                    LORE_PATTERN_PLACEHOLDER, matched.trigger().pattern(),
+                    CREATIVE_ACTION_PLACEHOLDER, creativeAction);
+
+            if (triggerLogEntry.startsWith("Message not found:")) {
+                triggerLogEntry = "[" + time + "] [LORE-TRIGGER] "
+                        + playerName
+                        + " (" + creativeAction + ") "
+                        + amount + "x " + itemName + " (" + materialName + ") "
+                        + "matched lore '" + matched.matchedLoreLine() + "' "
+                        + "with pattern '" + matched.trigger().pattern() + "' "
+                        + "related='" + otherPlayerName + "'";
+            }
+
+            writeToLogFile(triggerLogEntry);
+        }
+    }
+
+    private MatchedLoreTrigger findCreativeLoreTrigger(ItemStack item) {
+        List<ConfigManager.CreativeLoreTrigger> triggers = plugin.getConfigManager().getCreativeLoreTriggers();
+        if (triggers.isEmpty()) {
+            return null;
+        }
+
+        List<String> loreLines = getItemLore(item);
+        if (loreLines.isEmpty()) {
+            return null;
+        }
+
+        boolean stripColorCodes = plugin.getConfigManager().isCreativeLoreTriggersStripColorCodes();
+
+        for (ConfigManager.CreativeLoreTrigger trigger : triggers) {
+            for (String loreLine : loreLines) {
+                boolean matches = plugin.getConfigManager().doesLoreMatchPattern(
+                        loreLine,
+                        trigger.pattern(),
+                        trigger.caseSensitive(),
+                        stripColorCodes);
+                if (matches) {
+                    return new MatchedLoreTrigger(trigger, loreLine);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private record MatchedLoreTrigger(ConfigManager.CreativeLoreTrigger trigger, String matchedLoreLine) {
+    }
+
+    private void handleCreativeMaterialTriggers(String playerName, String otherPlayerName, String creativeAction,
+            ItemStack item) {
+        if (!plugin.getConfigManager().isCreativeMaterialTriggersEnabled()) {
+            return;
+        }
+
+        MatchedMaterialTrigger matched = findCreativeMaterialTrigger(item);
+        if (matched == null) {
+            return;
+        }
+
+        String itemName = getItemDisplayName(item);
+        String materialName = item.getType().name();
+        String amount = String.valueOf(item.getAmount());
+        String time = plugin.getConfigManager().getFormattedTime();
+
+        String response = matched.trigger().response()
+                .replace(TIME_PLACEHOLDER, time)
+                .replace(PLAYER_PLACEHOLDER, playerName)
+                .replace(OTHER_PLAYER_PLACEHOLDER, otherPlayerName)
+                .replace(ITEM_PLACEHOLDER, itemName)
+                .replace(MATERIAL_PLACEHOLDER, materialName)
+                .replace(AMOUNT_PLACEHOLDER, amount)
+                .replace(MATCHED_MATERIAL_PLACEHOLDER, matched.matchedMaterial())
+                .replace(MATERIAL_PATTERN_PLACEHOLDER, matched.trigger().pattern())
+                .replace(CREATIVE_ACTION_PLACEHOLDER, creativeAction);
+
+        plugin.getDiscordManager().sendToDiscord(response);
+        plugin.getLogger().warning(MATERIAL_TRIGGER_LOG_PREFIX + response);
+
+        if (plugin.getConfigManager().isCreativeMaterialTriggersWriteToLog()
+                && plugin.getConfigManager().isFileLoggingEnabled()) {
+            String triggerLogEntry = plugin.getConfigManager().getMessage("logging.creative-material-trigger",
+                    TIME_PLACEHOLDER, time,
+                    PLAYER_PLACEHOLDER, playerName,
+                    OTHER_PLAYER_PLACEHOLDER, otherPlayerName,
+                    ITEM_PLACEHOLDER, itemName,
+                    MATERIAL_PLACEHOLDER, materialName,
+                    AMOUNT_PLACEHOLDER, amount,
+                    MATCHED_MATERIAL_PLACEHOLDER, matched.matchedMaterial(),
+                    MATERIAL_PATTERN_PLACEHOLDER, matched.trigger().pattern(),
+                    CREATIVE_ACTION_PLACEHOLDER, creativeAction);
+
+            if (triggerLogEntry.startsWith("Message not found:")) {
+                triggerLogEntry = "[" + time + "] [MATERIAL-TRIGGER] "
+                        + playerName
+                        + " (" + creativeAction + ") "
+                        + amount + "x " + itemName + " (" + materialName + ") "
+                        + "matched material '" + matched.matchedMaterial() + "' "
+                        + "with pattern '" + matched.trigger().pattern() + "' "
+                        + "related='" + otherPlayerName + "'";
+            }
+
+            writeToLogFile(triggerLogEntry);
+        }
+    }
+
+    private MatchedMaterialTrigger findCreativeMaterialTrigger(ItemStack item) {
+        List<ConfigManager.CreativeMaterialTrigger> triggers = plugin.getConfigManager().getCreativeMaterialTriggers();
+        if (triggers.isEmpty()) {
+            return null;
+        }
+
+        String materialName = item.getType().name();
+        for (ConfigManager.CreativeMaterialTrigger trigger : triggers) {
+            boolean matches = plugin.getConfigManager().doesMaterialMatchPattern(
+                    materialName,
+                    trigger.pattern(),
+                    trigger.caseSensitive());
+            if (matches) {
+                return new MatchedMaterialTrigger(trigger, materialName);
+            }
+        }
+
+        return null;
+    }
+
+    private record MatchedMaterialTrigger(ConfigManager.CreativeMaterialTrigger trigger, String matchedMaterial) {
     }
 
     private void writeToLogFile(String logEntry) {
@@ -538,15 +752,18 @@ public class CommandListener implements Listener {
         String logEntry = plugin.getConfigManager().getMessage("logging.creative-item-drop",
                 TIME_PLACEHOLDER, time,
                 PLAYER_PLACEHOLDER, playerName,
-                "%amount%", String.valueOf(amount),
-                "%item%", itemName,
-                "%material%", materialName);
+                AMOUNT_PLACEHOLDER, String.valueOf(amount),
+                ITEM_PLACEHOLDER, itemName,
+                MATERIAL_PLACEHOLDER, materialName);
 
         plugin.getDiscordManager().sendCreativeItemDrop(playerName, item);
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
+
+        handleCreativeLoreTriggers(playerName, playerName, "drop", item);
+        handleCreativeMaterialTriggers(playerName, playerName, "drop", item);
     }
 
     private void logCreativeItemPickup(Player picker, DroppedItemInfo dropInfo) {
@@ -562,14 +779,17 @@ public class CommandListener implements Listener {
                 TIME_PLACEHOLDER, time,
                 "%picker%", pickerName,
                 "%dropper%", dropperName,
-                "%amount%", String.valueOf(amount),
-                "%item%", itemName,
-                "%material%", materialName);
+                AMOUNT_PLACEHOLDER, String.valueOf(amount),
+                ITEM_PLACEHOLDER, itemName,
+                MATERIAL_PLACEHOLDER, materialName);
 
         plugin.getDiscordManager().sendCreativeItemPickup(pickerName, dropperName, item);
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
+
+        handleCreativeLoreTriggers(pickerName, dropperName, "pickup", item);
+        handleCreativeMaterialTriggers(pickerName, dropperName, "pickup", item);
     }
 }
