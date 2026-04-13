@@ -145,3 +145,5 @@ tmp/
 .env.local
 .env.*.local
 .github
+
+folia-test-server

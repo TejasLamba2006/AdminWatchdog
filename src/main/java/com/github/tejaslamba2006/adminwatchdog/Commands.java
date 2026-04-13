@@ -1,8 +1,10 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -64,24 +66,24 @@ public final class Commands implements TabExecutor {
 
                 plugin.getUpdateChecker().checkForUpdatesSync().thenAccept(result -> {
                     if (result.hasError()) {
-                        sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                    sendMessageSafely(sender, plugin.getConfigManager().getMessageComponent(
                                 "update.check-failed",
-                                "%error%", result.getError()));
+                        "%error%", result.getError()));
                     } else if (result.isUpdateAvailable()) {
-                        sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                    sendMessageSafely(sender, plugin.getConfigManager().getMessageComponent(
                                 "update.available",
                                 "%current%", result.getCurrentVersion(),
-                                "%latest%", result.getLatestVersion()));
-                        sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                        "%latest%", result.getLatestVersion()));
+                    sendMessageSafely(sender, plugin.getConfigManager().getMessageComponent(
                                 "update.download",
-                                "%download%", result.getDownloadUrl()));
+                        "%download%", result.getDownloadUrl()));
                     } else {
-                        sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                    sendMessageSafely(sender, plugin.getConfigManager().getMessageComponent(
                                 "update.up-to-date",
-                                "%current%", result.getCurrentVersion()));
+                        "%current%", result.getCurrentVersion()));
                     }
                 }).exceptionally(ex -> {
-                    sender.sendMessage(plugin.getConfigManager().getMessageComponent(
+                    sendMessageSafely(sender, plugin.getConfigManager().getMessageComponent(
                             "update.check-failed",
                             "%error%", ex.getMessage()));
                     return null;
@@ -110,6 +112,15 @@ public final class Commands implements TabExecutor {
         }
 
         return new ArrayList<>();
+    }
+
+    private void sendMessageSafely(CommandSender sender, Component message) {
+        if (sender instanceof Player player) {
+            player.getScheduler().execute(plugin, () -> sender.sendMessage(message), null, 1L);
+            return;
+        }
+
+        plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> sender.sendMessage(message));
     }
 
 }

@@ -76,13 +76,13 @@ public class CommandListener implements Listener {
     }
 
     private void startDropCleanupTask() {
-        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+        plugin.getServer().getAsyncScheduler().runAtFixedRate(plugin, task -> {
             long now = System.currentTimeMillis();
             int trackingDuration = plugin.getConfigManager().getCreativeItemDropTrackingDuration();
             long expiryTime = TimeUnit.SECONDS.toMillis(trackingDuration);
 
             trackedCreativeDrops.entrySet().removeIf(entry -> (now - entry.getValue().dropTime()) > expiryTime);
-        }, 20L * 60, 20L * 60);
+        }, 60L, 60L, TimeUnit.SECONDS);
     }
 
     @EventHandler

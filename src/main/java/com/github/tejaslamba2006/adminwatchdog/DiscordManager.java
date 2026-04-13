@@ -1,5 +1,6 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 
@@ -12,10 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
-import org.bukkit.scheduler.BukkitTask;
 
 public final class DiscordManager {
 
@@ -30,7 +30,7 @@ public final class DiscordManager {
     private final MinecraftApiHelper apiHelper;
     private final ConcurrentLinkedQueue<String> batchedMessages = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean flushingBatch = new AtomicBoolean(false);
-    private BukkitTask batchFlushTask;
+    private ScheduledTask batchFlushTask;
 
     public DiscordManager(AdminWatchdog plugin) {
         this.plugin = plugin;
@@ -104,13 +104,12 @@ public final class DiscordManager {
         }
 
         long intervalMillis = plugin.getConfigManager().getDiscordBatchIntervalMs();
-        long intervalTicks = Math.max(1L, intervalMillis / 50L);
-
-        batchFlushTask = plugin.getServer().getScheduler().runTaskTimerAsynchronously(
+        batchFlushTask = plugin.getServer().getAsyncScheduler().runAtFixedRate(
                 plugin,
-                this::flushBatchedMessages,
-                intervalTicks,
-                intervalTicks);
+                task -> flushBatchedMessages(),
+                intervalMillis,
+                intervalMillis,
+                TimeUnit.MILLISECONDS);
     }
 
     private void flushBatchedMessages() {
@@ -218,17 +217,18 @@ public final class DiscordManager {
     }
 
     private void sendCreativeInventoryEmbed(String playerName, ItemStack item) {
-        CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(item);
+        ItemStack snapshot = item.clone();
+        CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(snapshot);
 
         itemDataFuture.thenAcceptAsync(itemData -> {
             try {
-                String embedJson = createCreativeInventoryEmbed(playerName, item, itemData);
+                String embedJson = createCreativeInventoryEmbed(playerName, snapshot, itemData);
                 sendJsonToDiscord(embedJson);
             } catch (Exception e) {
-                handleEmbedError(e, playerName, item);
+                handleEmbedError(e, playerName, snapshot);
             }
         }).exceptionally(ex -> {
-            handleEmbedError(ex, playerName, item);
+            handleEmbedError(ex, playerName, snapshot);
             return null;
         });
     }
@@ -503,20 +503,21 @@ public final class DiscordManager {
     }
 
     private void sendCreativeItemDropEmbed(String playerName, ItemStack item) {
-        CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(item);
+        ItemStack snapshot = item.clone();
+        CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(snapshot);
 
         itemDataFuture.thenAcceptAsync(itemData -> {
             try {
-                String embedJson = createCreativeItemDropEmbed(playerName, item, itemData);
+                String embedJson = createCreativeItemDropEmbed(playerName, snapshot, itemData);
                 sendJsonToDiscord(embedJson);
             } catch (Exception e) {
                 if (plugin.getConfigManager().isFallbackToSimple()) {
-                    sendCreativeItemDropSimple(playerName, item);
+                    sendCreativeItemDropSimple(playerName, snapshot);
                 }
             }
         }).exceptionally(ex -> {
             if (plugin.getConfigManager().isFallbackToSimple()) {
-                sendCreativeItemDropSimple(playerName, item);
+                sendCreativeItemDropSimple(playerName, snapshot);
             }
             return null;
         });
@@ -589,20 +590,21 @@ public final class DiscordManager {
     }
 
     private void sendCreativeItemPickupEmbed(String pickerName, String dropperName, ItemStack item) {
-        CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(item);
+        ItemStack snapshot = item.clone();
+        CompletableFuture<MinecraftApiHelper.ItemData> itemDataFuture = apiHelper.getItemData(snapshot);
 
         itemDataFuture.thenAcceptAsync(itemData -> {
             try {
-                String embedJson = createCreativeItemPickupEmbed(pickerName, dropperName, item, itemData);
+                String embedJson = createCreativeItemPickupEmbed(pickerName, dropperName, snapshot, itemData);
                 sendJsonToDiscord(embedJson);
             } catch (Exception e) {
                 if (plugin.getConfigManager().isFallbackToSimple()) {
-                    sendCreativeItemPickupSimple(pickerName, dropperName, item);
+                    sendCreativeItemPickupSimple(pickerName, dropperName, snapshot);
                 }
             }
         }).exceptionally(ex -> {
             if (plugin.getConfigManager().isFallbackToSimple()) {
-                sendCreativeItemPickupSimple(pickerName, dropperName, item);
+                sendCreativeItemPickupSimple(pickerName, dropperName, snapshot);
             }
             return null;
         });

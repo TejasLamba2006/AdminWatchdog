@@ -178,7 +178,7 @@ Give yourself one of the bypass permissions. For example, if you don't want cust
 
 ## Requirements
 
-- Paper or Spigot server (Paper recommended)
+- Paper or Folia server
 - Minecraft 1.20 or newer
 - Java 21 or newer
 

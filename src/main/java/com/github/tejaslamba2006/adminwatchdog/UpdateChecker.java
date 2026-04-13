@@ -1,11 +1,12 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,20 +15,21 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 public final class UpdateChecker {
 
-    private static final String DEFAULT_REPO = "tejaslamba2006/AdminWatchdog";
-    private static final String GITHUB_API_URL = "https://api.github.com/repos/%s/releases/latest";
+    private static final String MODRINTH_PROJECT_SLUG = "adminwatchdog";
+    private static final String MODRINTH_API_URL = "https://api.modrinth.com/v2/project/%s/version";
+    private static final String MODRINTH_VERSION_PAGE_URL = "https://modrinth.com/plugin/%s/version/%s";
     private static final long STARTUP_DELAY_TICKS = 100L;
     private static final int CONNECTION_TIMEOUT = 5000;
     private static final int READ_TIMEOUT = 10000;
 
     private final AdminWatchdog plugin;
-    private final String githubRepo;
     private final String currentVersion;
-    private BukkitTask updateTask;
+    private ScheduledTask updateTask;
     private String latestVersion;
     private String downloadUrl;
     private boolean updateAvailable = false;
@@ -35,7 +37,6 @@ public final class UpdateChecker {
     public UpdateChecker(AdminWatchdog plugin) {
         this.plugin = plugin;
         this.currentVersion = plugin.getPluginMeta().getVersion();
-        this.githubRepo = plugin.getConfigManager().getUpdateCheckerRepo();
     }
 
     public void startUpdateChecker() {
@@ -43,7 +44,11 @@ public final class UpdateChecker {
             return;
         }
 
-        Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, this::checkForUpdates, STARTUP_DELAY_TICKS);
+        updateTask = plugin.getServer().getAsyncScheduler().runDelayed(
+                plugin,
+                task -> checkForUpdates(),
+                STARTUP_DELAY_TICKS * 50L,
+                TimeUnit.MILLISECONDS);
 
         plugin.getLogger().info("Update checker started. Will check on startup only.");
     }
@@ -52,7 +57,7 @@ public final class UpdateChecker {
      * Stop the update checker task
      */
     public void stopUpdateChecker() {
-        if (updateTask != null && !updateTask.isCancelled()) {
+        if (updateTask != null) {
             updateTask.cancel();
             updateTask = null;
         }
@@ -92,7 +97,7 @@ public final class UpdateChecker {
                 plugin.getLogger().info("Download: " + downloadUrl);
                 plugin.getLogger().info("===================================");
 
-                Bukkit.getScheduler().runTask(plugin, this::notifyAdministrators);
+                plugin.getServer().getGlobalRegionScheduler().execute(plugin, this::notifyAdministrators);
 
                 if (plugin.getConfigManager().isUpdateNotificationDiscordEnabled()) {
                     sendDiscordUpdateNotification();
@@ -109,19 +114,20 @@ public final class UpdateChecker {
     }
 
     private UpdateResult performUpdateCheck() throws IOException {
-        String repoUrl = String.format(GITHUB_API_URL, githubRepo.isEmpty() ? DEFAULT_REPO : githubRepo);
+        String projectSlug = MODRINTH_PROJECT_SLUG;
+        String apiUrl = String.format(MODRINTH_API_URL, projectSlug);
 
-        URL url = URI.create(repoUrl).toURL();
+        URL url = URI.create(apiUrl).toURL();
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
-        connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
+        connection.setRequestProperty("Accept", "application/json");
         connection.setRequestProperty("User-Agent", "AdminWatchdog-UpdateChecker/1.0");
         connection.setConnectTimeout(CONNECTION_TIMEOUT);
         connection.setReadTimeout(READ_TIMEOUT);
 
         int responseCode = connection.getResponseCode();
         if (responseCode != 200) {
-            throw new IOException("GitHub API returned response code: " + responseCode);
+            throw new IOException("Modrinth API returned response code: " + responseCode);
         }
 
         StringBuilder response = new StringBuilder();
@@ -132,17 +138,45 @@ public final class UpdateChecker {
             }
         }
 
-        JsonObject json = JsonParser.parseString(response.toString()).getAsJsonObject();
+        JsonArray versions = JsonParser.parseString(response.toString()).getAsJsonArray();
+        JsonObject latestVersionEntry = findLatestReleaseVersion(versions);
 
-        String fetchedLatestVersion = json.get("tag_name").getAsString();
-        if (fetchedLatestVersion.startsWith("v")) {
-            fetchedLatestVersion = fetchedLatestVersion.substring(1);
-        }
+        String fetchedLatestVersion = latestVersionEntry.get("version_number").getAsString();
+        String latestVersionId = latestVersionEntry.get("id").getAsString();
 
         boolean isNewer = isNewerVersion(currentVersion, fetchedLatestVersion);
+        String versionPageUrl = String.format(MODRINTH_VERSION_PAGE_URL, projectSlug, latestVersionId);
 
-        return new UpdateResult(isNewer, currentVersion, fetchedLatestVersion,
-                "https://modrinth.com/plugin/adminwatchdog", null);
+        return new UpdateResult(isNewer, currentVersion, fetchedLatestVersion, versionPageUrl, null);
+    }
+
+    private JsonObject findLatestReleaseVersion(JsonArray versions) throws IOException {
+        if (versions == null || versions.isEmpty()) {
+            throw new IOException("Modrinth API returned no versions");
+        }
+
+        JsonObject fallback = null;
+        for (JsonElement element : versions) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+
+            JsonObject version = element.getAsJsonObject();
+            if (fallback == null) {
+                fallback = version;
+            }
+
+            if (version.has("version_type")
+                    && "release".equalsIgnoreCase(version.get("version_type").getAsString())) {
+                return version;
+            }
+        }
+
+        if (fallback != null) {
+            return fallback;
+        }
+
+        throw new IOException("Modrinth API returned no valid version objects");
     }
 
     /**
@@ -186,9 +220,9 @@ public final class UpdateChecker {
 
         Component component = plugin.getConfigManager().deserializeConfiguredMessage(message);
 
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
             if (player.hasPermission("adminwatchdog.update.notify")) {
-                player.sendMessage(component);
+                player.getScheduler().execute(plugin, () -> player.sendMessage(component), null, 1L);
             }
         }
     }

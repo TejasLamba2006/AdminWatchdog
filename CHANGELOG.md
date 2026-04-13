@@ -2,6 +2,25 @@
 
 All notable changes to AdminWatchdog will be documented in this file.
 
+## [1.4.2] - 2026-04-13
+
+This release adds native Folia support while preserving Paper compatibility.
+
+### Added
+
+- Marked plugin metadata as Folia-supported so the plugin can load on Folia.
+
+### Changed
+
+- Replaced Bukkit scheduler usage with Folia-compatible AsyncScheduler and GlobalRegionScheduler APIs.
+- Updated update-notification delivery to use per-player entity schedulers.
+- Made async command update responses scheduler-safe for both player and console senders.
+- Updated docs/build instructions and Paper API baseline to current 1.21 Folia-compatible versions.
+
+### Notes
+
+- The new scheduler usage works on both Paper and Folia.
+
 ## [1.4.1] - 2026-04-08
 
 This update is mostly about clarity. The plugin behavior stays familiar, but the text around it should feel easier to read and edit when you are moving fast.

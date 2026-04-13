@@ -203,26 +203,34 @@ Aliases: `aw`, `awdog`
 ### Requirements
 
 - JDK 21+
-- Gradle 8.x+
-- Paper API 1.20.1+
+- Maven 3.9+
+- Paper API 1.21+ (Paper/Folia compatible)
 
 ### Build
 
 ```bash
 git clone https://github.com/tejaslamba2006/AdminWatchdog.git
 cd AdminWatchdog
-gradle build
-# Output: build/libs/AdminWatchdog.jar
+mvn clean package
+# Output: target/AdminWatchdog.jar
 ```
 
 ### Dependencies
 
-```gradle
-dependencies {
-    compileOnly 'io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT'
-    implementation 'com.google.code.gson:gson:2.10.1'
-    // Guava provided by Paper runtime
-}
+```xml
+<dependencies>
+  <dependency>
+    <groupId>io.papermc.paper</groupId>
+    <artifactId>paper-api</artifactId>
+    <version>1.21.11-R0.1-SNAPSHOT</version>
+    <scope>provided</scope>
+  </dependency>
+  <dependency>
+    <groupId>com.google.code.gson</groupId>
+    <artifactId>gson</artifactId>
+    <version>2.10.1</version>
+  </dependency>
+</dependencies>
 ```
 
 ## Performance notes
