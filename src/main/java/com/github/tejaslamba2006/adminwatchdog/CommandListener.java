@@ -1,6 +1,5 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Item;
@@ -19,9 +18,6 @@ import org.bukkit.inventory.ItemStack;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,25 +29,12 @@ public class CommandListener implements Listener {
 
     private static final String TIME_PLACEHOLDER = "%time%";
     private static final String PLAYER_PLACEHOLDER = "%player%";
-    private static final String SENDER_PLACEHOLDER = "%sender%";
     private static final String COMMAND_PLACEHOLDER = "%command%";
-    private static final String ITEM_PLACEHOLDER = "%item%";
-    private static final String MATERIAL_PLACEHOLDER = "%material%";
-    private static final String AMOUNT_PLACEHOLDER = "%amount%";
-    private static final String OTHER_PLAYER_PLACEHOLDER = "%other_player%";
-    private static final String MATCHED_LORE_PLACEHOLDER = "%matched_lore%";
-    private static final String LORE_PATTERN_PLACEHOLDER = "%lore_pattern%";
-    private static final String MATCHED_MATERIAL_PLACEHOLDER = "%matched_material%";
-    private static final String MATERIAL_PATTERN_PLACEHOLDER = "%material_pattern%";
-    private static final String CREATIVE_ACTION_PLACEHOLDER = "%creative_action%";
-    private static final String LORE_TRIGGER_LOG_PREFIX = "[LORE-TRIGGER] ";
-    private static final String MATERIAL_TRIGGER_LOG_PREFIX = "[MATERIAL-TRIGGER] ";
 
     private final File logFile;
     private final AdminWatchdog plugin;
 
     private final Map<UUID, DroppedItemInfo> trackedCreativeDrops = new ConcurrentHashMap<>();
-    private final Map<String, Deque<Long>> repeatedCommandHistory = new ConcurrentHashMap<>();
 
     public CommandListener(AdminWatchdog plugin) {
         this.plugin = plugin;
@@ -76,13 +59,13 @@ public class CommandListener implements Listener {
     }
 
     private void startDropCleanupTask() {
-        plugin.getServer().getAsyncScheduler().runAtFixedRate(plugin, task -> {
+        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
             long now = System.currentTimeMillis();
             int trackingDuration = plugin.getConfigManager().getCreativeItemDropTrackingDuration();
             long expiryTime = TimeUnit.SECONDS.toMillis(trackingDuration);
 
             trackedCreativeDrops.entrySet().removeIf(entry -> (now - entry.getValue().dropTime()) > expiryTime);
-        }, 60L, 60L, TimeUnit.SECONDS);
+        }, 20L * 60, 20L * 60);
     }
 
     @EventHandler
@@ -140,15 +123,12 @@ public class CommandListener implements Listener {
         String senderName = event.getSender().getName();
         String command = event.getCommand();
         boolean customResponseTriggered = false;
-        boolean repeatTriggerResponse = false;
 
         if (plugin.getConfigManager().isCustomCommandResponsesEnabled()) {
             customResponseTriggered = handleCustomConsoleCommandResponse(senderName, "/" + command);
-            repeatTriggerResponse = handleRepeatTriggerResponse(senderName, "/" + command, true);
         }
 
-        if ((customResponseTriggered || repeatTriggerResponse)
-                && plugin.getConfigManager().isSuppressNormalLoggingEnabled()) {
+        if (customResponseTriggered && plugin.getConfigManager().isSuppressNormalLoggingEnabled()) {
             return;
         }
 
@@ -174,19 +154,16 @@ public class CommandListener implements Listener {
         Player player = event.getPlayer();
         String command = event.getMessage();
         boolean customResponseTriggered = false;
-        boolean repeatTriggerResponse = false;
 
         if (plugin.getConfigManager().isCustomCommandResponsesEnabled()
                 && !player.hasPermission("adminwatchdog.bypass.customresponses")) {
 
             if (shouldMonitorPlayerForCustomResponses(player)) {
                 customResponseTriggered = handleCustomCommandResponse(player, command);
-                repeatTriggerResponse = handleRepeatTriggerResponse(player.getName(), command, false);
             }
         }
 
-        if ((customResponseTriggered || repeatTriggerResponse)
-                && plugin.getConfigManager().isSuppressNormalLoggingEnabled()) {
+        if (customResponseTriggered && plugin.getConfigManager().isSuppressNormalLoggingEnabled()) {
             return;
         }
 
@@ -243,7 +220,7 @@ public class CommandListener implements Listener {
         Map.Entry<String, String> match = plugin.getConfigManager().findMatchingCustomResponse(command, true);
         if (match != null && !match.getValue().isEmpty()) {
             String formattedResponse = match.getValue()
-                    .replace(SENDER_PLACEHOLDER, senderName)
+                    .replace("%sender%", senderName)
                     .replace(COMMAND_PLACEHOLDER, command)
                     .replace(TIME_PLACEHOLDER, plugin.getConfigManager().getFormattedTime());
 
@@ -252,57 +229,6 @@ public class CommandListener implements Listener {
             }
             return true;
         }
-        return false;
-    }
-
-    private boolean handleRepeatTriggerResponse(String actorName, String command, boolean isConsole) {
-        if (!plugin.getConfigManager().isRepeatTriggersEnabled()) {
-            return false;
-        }
-
-        for (ConfigManager.RepeatTrigger trigger : plugin.getConfigManager().getRepeatTriggers(isConsole)) {
-            if (!plugin.getConfigManager().doesCommandMatchPattern(command, trigger.pattern())) {
-                continue;
-            }
-
-            String trackerKey = (isConsole ? "console:" : "player:")
-                    + actorName.toLowerCase()
-                    + "|"
-                    + trigger.pattern().toLowerCase();
-
-            Deque<Long> timestamps = repeatedCommandHistory.computeIfAbsent(trackerKey, ignored -> new ArrayDeque<>());
-            long now = System.currentTimeMillis();
-            long oldestAllowed = now - TimeUnit.SECONDS.toMillis(trigger.intervalSeconds());
-
-            synchronized (timestamps) {
-                while (!timestamps.isEmpty() && timestamps.peekFirst() < oldestAllowed) {
-                    timestamps.pollFirst();
-                }
-
-                timestamps.addLast(now);
-
-                if (timestamps.size() < trigger.count()) {
-                    continue;
-                }
-
-                timestamps.clear();
-            }
-
-            String formattedResponse = trigger.response()
-                    .replace(PLAYER_PLACEHOLDER, actorName)
-                    .replace(SENDER_PLACEHOLDER, actorName)
-                    .replace(COMMAND_PLACEHOLDER, command)
-                    .replace("%count%", String.valueOf(trigger.count()))
-                    .replace("%interval%", String.valueOf(trigger.intervalSeconds()))
-                    .replace(TIME_PLACEHOLDER, plugin.getConfigManager().getFormattedTime());
-
-            if (plugin.getConfigManager().isDiscordEnabled()) {
-                plugin.getDiscordManager().sendToDiscord(formattedResponse);
-            }
-
-            return true;
-        }
-
         return false;
     }
 
@@ -436,223 +362,22 @@ public class CommandListener implements Listener {
                 TIME_PLACEHOLDER, time,
                 "%prefix%", prefix,
                 PLAYER_PLACEHOLDER, playerName,
-                AMOUNT_PLACEHOLDER, String.valueOf(amount),
-                ITEM_PLACEHOLDER, itemName,
-                MATERIAL_PLACEHOLDER, materialName);
+                "%amount%", String.valueOf(amount),
+                "%item%", itemName,
+                "%material%", materialName);
 
         plugin.getDiscordManager().sendCreativeInventoryAction(playerName, item);
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
-
-        handleCreativeLoreTriggers(playerName, playerName, "inventory-take", item);
-        handleCreativeMaterialTriggers(playerName, playerName, "inventory-take", item);
     }
 
     private String getItemDisplayName(ItemStack item) {
         if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-            try {
-                return PlainTextComponentSerializer.plainText().serialize(item.getItemMeta().displayName()).trim();
-            } catch (Exception ignored) {
-            }
+            return item.getItemMeta().displayName().toString();
         }
         return item.getType().name().toLowerCase().replace('_', ' ');
-    }
-
-    private List<String> getItemLore(ItemStack item) {
-        try {
-            if (!item.hasItemMeta() || !item.getItemMeta().hasLore()) {
-                return List.of();
-            }
-
-            List<String> lore = new ArrayList<>();
-            for (var component : item.getItemMeta().lore()) {
-                try {
-                    String line = PlainTextComponentSerializer.plainText().serialize(component).trim();
-                    if (!line.isEmpty()) {
-                        lore.add(line);
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-
-            return lore;
-        } catch (Exception e) {
-            if (plugin.getConfigManager().isDebugEnabled()) {
-                plugin.getLogger().warning("Failed reading item lore: " + e.getMessage());
-            }
-            return List.of();
-        }
-    }
-
-    private void handleCreativeLoreTriggers(String playerName, String otherPlayerName, String creativeAction,
-            ItemStack item) {
-        if (!plugin.getConfigManager().isCreativeLoreTriggersEnabled()) {
-            return;
-        }
-
-        MatchedLoreTrigger matched = findCreativeLoreTrigger(item);
-        if (matched == null) {
-            return;
-        }
-
-        String itemName = getItemDisplayName(item);
-        String materialName = item.getType().name();
-        String amount = String.valueOf(item.getAmount());
-        String time = plugin.getConfigManager().getFormattedTime();
-
-        String response = matched.trigger().response()
-                .replace(TIME_PLACEHOLDER, time)
-                .replace(PLAYER_PLACEHOLDER, playerName)
-                .replace(OTHER_PLAYER_PLACEHOLDER, otherPlayerName)
-                .replace(ITEM_PLACEHOLDER, itemName)
-                .replace(MATERIAL_PLACEHOLDER, materialName)
-                .replace(AMOUNT_PLACEHOLDER, amount)
-                .replace(MATCHED_LORE_PLACEHOLDER, matched.matchedLoreLine())
-                .replace(LORE_PATTERN_PLACEHOLDER, matched.trigger().pattern())
-                .replace(CREATIVE_ACTION_PLACEHOLDER, creativeAction);
-
-        plugin.getDiscordManager().sendToDiscord(response);
-        plugin.getLogger().warning(LORE_TRIGGER_LOG_PREFIX + response);
-
-        if (plugin.getConfigManager().isCreativeLoreTriggersWriteToLog()
-                && plugin.getConfigManager().isFileLoggingEnabled()) {
-            String triggerLogEntry = plugin.getConfigManager().getMessage("logging.creative-lore-trigger",
-                    TIME_PLACEHOLDER, time,
-                    PLAYER_PLACEHOLDER, playerName,
-                    OTHER_PLAYER_PLACEHOLDER, otherPlayerName,
-                    ITEM_PLACEHOLDER, itemName,
-                    MATERIAL_PLACEHOLDER, materialName,
-                    AMOUNT_PLACEHOLDER, amount,
-                    MATCHED_LORE_PLACEHOLDER, matched.matchedLoreLine(),
-                    LORE_PATTERN_PLACEHOLDER, matched.trigger().pattern(),
-                    CREATIVE_ACTION_PLACEHOLDER, creativeAction);
-
-            if (triggerLogEntry.startsWith("Message not found:")) {
-                triggerLogEntry = "[" + time + "] [LORE-TRIGGER] "
-                        + playerName
-                        + " (" + creativeAction + ") "
-                        + amount + "x " + itemName + " (" + materialName + ") "
-                        + "matched lore '" + matched.matchedLoreLine() + "' "
-                        + "with pattern '" + matched.trigger().pattern() + "' "
-                        + "related='" + otherPlayerName + "'";
-            }
-
-            writeToLogFile(triggerLogEntry);
-        }
-    }
-
-    private MatchedLoreTrigger findCreativeLoreTrigger(ItemStack item) {
-        List<ConfigManager.CreativeLoreTrigger> triggers = plugin.getConfigManager().getCreativeLoreTriggers();
-        if (triggers.isEmpty()) {
-            return null;
-        }
-
-        List<String> loreLines = getItemLore(item);
-        if (loreLines.isEmpty()) {
-            return null;
-        }
-
-        boolean stripColorCodes = plugin.getConfigManager().isCreativeLoreTriggersStripColorCodes();
-
-        for (ConfigManager.CreativeLoreTrigger trigger : triggers) {
-            for (String loreLine : loreLines) {
-                boolean matches = plugin.getConfigManager().doesLoreMatchPattern(
-                        loreLine,
-                        trigger.pattern(),
-                        trigger.caseSensitive(),
-                        stripColorCodes);
-                if (matches) {
-                    return new MatchedLoreTrigger(trigger, loreLine);
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private record MatchedLoreTrigger(ConfigManager.CreativeLoreTrigger trigger, String matchedLoreLine) {
-    }
-
-    private void handleCreativeMaterialTriggers(String playerName, String otherPlayerName, String creativeAction,
-            ItemStack item) {
-        if (!plugin.getConfigManager().isCreativeMaterialTriggersEnabled()) {
-            return;
-        }
-
-        MatchedMaterialTrigger matched = findCreativeMaterialTrigger(item);
-        if (matched == null) {
-            return;
-        }
-
-        String itemName = getItemDisplayName(item);
-        String materialName = item.getType().name();
-        String amount = String.valueOf(item.getAmount());
-        String time = plugin.getConfigManager().getFormattedTime();
-
-        String response = matched.trigger().response()
-                .replace(TIME_PLACEHOLDER, time)
-                .replace(PLAYER_PLACEHOLDER, playerName)
-                .replace(OTHER_PLAYER_PLACEHOLDER, otherPlayerName)
-                .replace(ITEM_PLACEHOLDER, itemName)
-                .replace(MATERIAL_PLACEHOLDER, materialName)
-                .replace(AMOUNT_PLACEHOLDER, amount)
-                .replace(MATCHED_MATERIAL_PLACEHOLDER, matched.matchedMaterial())
-                .replace(MATERIAL_PATTERN_PLACEHOLDER, matched.trigger().pattern())
-                .replace(CREATIVE_ACTION_PLACEHOLDER, creativeAction);
-
-        plugin.getDiscordManager().sendToDiscord(response);
-        plugin.getLogger().warning(MATERIAL_TRIGGER_LOG_PREFIX + response);
-
-        if (plugin.getConfigManager().isCreativeMaterialTriggersWriteToLog()
-                && plugin.getConfigManager().isFileLoggingEnabled()) {
-            String triggerLogEntry = plugin.getConfigManager().getMessage("logging.creative-material-trigger",
-                    TIME_PLACEHOLDER, time,
-                    PLAYER_PLACEHOLDER, playerName,
-                    OTHER_PLAYER_PLACEHOLDER, otherPlayerName,
-                    ITEM_PLACEHOLDER, itemName,
-                    MATERIAL_PLACEHOLDER, materialName,
-                    AMOUNT_PLACEHOLDER, amount,
-                    MATCHED_MATERIAL_PLACEHOLDER, matched.matchedMaterial(),
-                    MATERIAL_PATTERN_PLACEHOLDER, matched.trigger().pattern(),
-                    CREATIVE_ACTION_PLACEHOLDER, creativeAction);
-
-            if (triggerLogEntry.startsWith("Message not found:")) {
-                triggerLogEntry = "[" + time + "] [MATERIAL-TRIGGER] "
-                        + playerName
-                        + " (" + creativeAction + ") "
-                        + amount + "x " + itemName + " (" + materialName + ") "
-                        + "matched material '" + matched.matchedMaterial() + "' "
-                        + "with pattern '" + matched.trigger().pattern() + "' "
-                        + "related='" + otherPlayerName + "'";
-            }
-
-            writeToLogFile(triggerLogEntry);
-        }
-    }
-
-    private MatchedMaterialTrigger findCreativeMaterialTrigger(ItemStack item) {
-        List<ConfigManager.CreativeMaterialTrigger> triggers = plugin.getConfigManager().getCreativeMaterialTriggers();
-        if (triggers.isEmpty()) {
-            return null;
-        }
-
-        String materialName = item.getType().name();
-        for (ConfigManager.CreativeMaterialTrigger trigger : triggers) {
-            boolean matches = plugin.getConfigManager().doesMaterialMatchPattern(
-                    materialName,
-                    trigger.pattern(),
-                    trigger.caseSensitive());
-            if (matches) {
-                return new MatchedMaterialTrigger(trigger, materialName);
-            }
-        }
-
-        return null;
-    }
-
-    private record MatchedMaterialTrigger(ConfigManager.CreativeMaterialTrigger trigger, String matchedMaterial) {
     }
 
     private void writeToLogFile(String logEntry) {
@@ -752,18 +477,15 @@ public class CommandListener implements Listener {
         String logEntry = plugin.getConfigManager().getMessage("logging.creative-item-drop",
                 TIME_PLACEHOLDER, time,
                 PLAYER_PLACEHOLDER, playerName,
-                AMOUNT_PLACEHOLDER, String.valueOf(amount),
-                ITEM_PLACEHOLDER, itemName,
-                MATERIAL_PLACEHOLDER, materialName);
+                "%amount%", String.valueOf(amount),
+                "%item%", itemName,
+                "%material%", materialName);
 
         plugin.getDiscordManager().sendCreativeItemDrop(playerName, item);
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
-
-        handleCreativeLoreTriggers(playerName, playerName, "drop", item);
-        handleCreativeMaterialTriggers(playerName, playerName, "drop", item);
     }
 
     private void logCreativeItemPickup(Player picker, DroppedItemInfo dropInfo) {
@@ -779,17 +501,14 @@ public class CommandListener implements Listener {
                 TIME_PLACEHOLDER, time,
                 "%picker%", pickerName,
                 "%dropper%", dropperName,
-                AMOUNT_PLACEHOLDER, String.valueOf(amount),
-                ITEM_PLACEHOLDER, itemName,
-                MATERIAL_PLACEHOLDER, materialName);
+                "%amount%", String.valueOf(amount),
+                "%item%", itemName,
+                "%material%", materialName);
 
         plugin.getDiscordManager().sendCreativeItemPickup(pickerName, dropperName, item);
 
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
-
-        handleCreativeLoreTriggers(pickerName, dropperName, "pickup", item);
-        handleCreativeMaterialTriggers(pickerName, dropperName, "pickup", item);
     }
 }
