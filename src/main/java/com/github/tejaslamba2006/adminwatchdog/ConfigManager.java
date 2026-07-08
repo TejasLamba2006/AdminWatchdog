@@ -1,5 +1,7 @@
 package com.github.tejaslamba2006.adminwatchdog;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -21,6 +23,7 @@ public class ConfigManager {
     private static final String CONFIG_VERSION_KEY = "config-version";
 
     private final AdminWatchdog plugin;
+    private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private FileConfiguration messagesConfig;
     private File messagesFile;
 
@@ -122,6 +125,19 @@ public class ConfigManager {
         return message;
     }
 
+    public Component getMessageComponent(String path, String... placeholders) {
+        String message = getMessage(path, placeholders);
+        return deserializeConfiguredMessage(message);
+    }
+
+    public Component deserializeConfiguredMessage(String message) {
+        if (message == null || message.isEmpty()) {
+            return Component.empty();
+        }
+
+        return miniMessage.deserialize(message);
+    }
+
     public String getFormattedTime() {
         String pattern = plugin.getConfig().getString("general.time-format", "yyyy-MM-dd HH:mm:ss");
         return LocalDateTime.now().format(DateTimeFormatter.ofPattern(pattern));
@@ -201,6 +217,22 @@ public class ConfigManager {
 
     public String getWebhookUrl() {
         return plugin.getConfig().getString("discord.webhook-url", "");
+    }
+
+    public boolean isDiscordBatchingEnabled() {
+        return plugin.getConfig().getBoolean("discord.batching.enabled", false);
+    }
+
+    public int getDiscordBatchIntervalMs() {
+        return Math.max(250, plugin.getConfig().getInt("discord.batching.interval-ms", 1000));
+    }
+
+    public int getDiscordBatchMaxMessages() {
+        return Math.max(1, plugin.getConfig().getInt("discord.batching.max-messages", 10));
+    }
+
+    public int getDiscordBatchMaxCombinedLength() {
+        return Math.max(200, plugin.getConfig().getInt("discord.batching.max-combined-length", 1800));
     }
 
     public boolean isDiscordEmbedsEnabled() {
