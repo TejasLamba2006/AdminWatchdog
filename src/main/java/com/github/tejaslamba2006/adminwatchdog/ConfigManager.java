@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 
 public class ConfigManager {
 
-    private static final int CURRENT_CONFIG_VERSION = 1;
+    private static final int CURRENT_CONFIG_VERSION = 2;
     private static final String CONFIG_VERSION_KEY = "config-version";
 
     private final AdminWatchdog plugin;
@@ -261,6 +261,26 @@ public class ConfigManager {
 
     public boolean isFileLoggingEnabled() {
         return plugin.getConfig().getBoolean("logging.file-logging", true);
+    }
+
+    public boolean isDatabaseLoggingEnabled() {
+        return plugin.getConfig().getBoolean("logging.database-logging", true);
+    }
+
+    public int getDatabaseRetentionDays() {
+        return plugin.getConfig().getInt("logging.database-retention-days", 30);
+    }
+
+    public boolean isCustomResponseRateLimitEnabled() {
+        return plugin.getConfig().getBoolean("custom-responses.rate-limit.enabled", true);
+    }
+
+    public int getCustomResponseRateLimitMax() {
+        return Math.max(1, plugin.getConfig().getInt("custom-responses.rate-limit.max-triggers", 5));
+    }
+
+    public int getCustomResponseRateLimitWindowSeconds() {
+        return Math.max(1, plugin.getConfig().getInt("custom-responses.rate-limit.window-seconds", 60));
     }
 
     public boolean isDebugEnabled() {

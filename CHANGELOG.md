@@ -2,6 +2,31 @@
 
 All notable changes to AdminWatchdog will be documented in this file.
 
+## [1.4.3] - 2026-07-09
+
+The last few versions focused on Discord. This one focuses on the question that comes right after a Discord alert fires: "okay, but what has this person actually been doing?" Right now the honest answer is "scroll through commands.log and squint." Not anymore.
+
+### Added
+
+- Audit history you can actually query. Every event AdminWatchdog already tracks (commands, gamemode changes, creative-inventory grabs, item drops and pickups) now also lands in a small local SQLite database. Run `/adminwatchdog history <player>` and you get their last 10 actions with timestamps, right in chat. Add a number to see more, up to 50. No more digging through log files when someone asks "wait, what did Steve actually do?"
+- A brake on custom-response spam. If a monitored player finds a pattern that triggers your custom alerts and decides to mash it, your Discord channel used to mash right along with them. Each player (and the console) is now capped at 5 triggers per 60 seconds by default. Both numbers are yours to change in `config.yml`.
+
+### Changed
+
+- Old audit rows clean themselves up. Default retention is 30 days; set `logging.database-retention-days: 0` if you'd rather keep everything forever.
+- Config auto-migrates like it always has. Update the jar, restart, and the new keys show up in your existing `config.yml` without you touching anything.
+
+### Under the hood
+
+- Rewrote the Discord embed builder around Gson instead of hand-assembled JSON strings. Same messages, less code duplicated across the three embed types.
+- Dropped a Guava cache that was caching something cheaper to just recompute. One less moving part.
+
+### Upgrade notes
+
+- New config keys: `logging.database-logging`, `logging.database-retention-days`, `custom-responses.rate-limit.*`. All optional, all have sane defaults, nothing breaks if you ignore them.
+- New permission: `adminwatchdog.history` (defaults to op).
+- The jar is noticeably bigger this release because it now bundles sqlite-jdbc, native database drivers included, so you don't have to install anything extra on the server.
+
 ## [1.4.2] - 2026-04-13
 
 This release adds native Folia support while preserving Paper compatibility.

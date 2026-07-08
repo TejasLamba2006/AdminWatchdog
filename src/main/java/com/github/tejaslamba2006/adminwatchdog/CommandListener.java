@@ -18,6 +18,8 @@ import org.bukkit.inventory.ItemStack;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -35,6 +37,7 @@ public class CommandListener implements Listener {
     private final AdminWatchdog plugin;
 
     private final Map<UUID, DroppedItemInfo> trackedCreativeDrops = new ConcurrentHashMap<>();
+    private final Map<String, Deque<Long>> customResponseTriggerTimes = new ConcurrentHashMap<>();
 
     public CommandListener(AdminWatchdog plugin) {
         this.plugin = plugin;
@@ -112,6 +115,7 @@ public class CommandListener implements Listener {
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
+        plugin.getAuditLogStorage().record("gamemode-change", playerName, logEntry);
     }
 
     @EventHandler
@@ -147,6 +151,7 @@ public class CommandListener implements Listener {
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
+        plugin.getAuditLogStorage().record("console-command", senderName, logEntry);
     }
 
     @EventHandler
@@ -208,7 +213,8 @@ public class CommandListener implements Listener {
                     .replace(COMMAND_PLACEHOLDER, command)
                     .replace(TIME_PLACEHOLDER, plugin.getConfigManager().getFormattedTime());
 
-            if (plugin.getConfigManager().isDiscordEnabled()) {
+            if (plugin.getConfigManager().isDiscordEnabled()
+                    && allowCustomResponseTrigger(player.getUniqueId().toString())) {
                 plugin.getDiscordManager().sendToDiscord(formattedResponse);
             }
             return true;
@@ -224,12 +230,39 @@ public class CommandListener implements Listener {
                     .replace(COMMAND_PLACEHOLDER, command)
                     .replace(TIME_PLACEHOLDER, plugin.getConfigManager().getFormattedTime());
 
-            if (plugin.getConfigManager().isDiscordEnabled()) {
+            if (plugin.getConfigManager().isDiscordEnabled()
+                    && allowCustomResponseTrigger("console:" + senderName)) {
                 plugin.getDiscordManager().sendToDiscord(formattedResponse);
             }
             return true;
         }
         return false;
+    }
+
+    /**
+     * Sliding-window rate limit for custom-response Discord triggers, keyed per player
+     * (or console sender). Prunes on each check rather than running a separate cleanup task.
+     */
+    private boolean allowCustomResponseTrigger(String key) {
+        if (!plugin.getConfigManager().isCustomResponseRateLimitEnabled()) {
+            return true;
+        }
+
+        long windowMillis = TimeUnit.SECONDS.toMillis(plugin.getConfigManager().getCustomResponseRateLimitWindowSeconds());
+        int maxTriggers = plugin.getConfigManager().getCustomResponseRateLimitMax();
+        long now = System.currentTimeMillis();
+
+        Deque<Long> timestamps = customResponseTriggerTimes.computeIfAbsent(key, k -> new ArrayDeque<>());
+        synchronized (timestamps) {
+            while (!timestamps.isEmpty() && now - timestamps.peekFirst() > windowMillis) {
+                timestamps.pollFirst();
+            }
+            if (timestamps.size() >= maxTriggers) {
+                return false;
+            }
+            timestamps.addLast(now);
+            return true;
+        }
     }
 
     private MonitoringResult shouldMonitorPlayer(Player player) {
@@ -277,6 +310,7 @@ public class CommandListener implements Listener {
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
+        plugin.getAuditLogStorage().record("player-command", playerName, logEntry);
     }
 
     private static class MonitoringResult {
@@ -371,6 +405,7 @@ public class CommandListener implements Listener {
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
+        plugin.getAuditLogStorage().record("creative-inventory", playerName, logEntry);
     }
 
     private String getItemDisplayName(ItemStack item) {
@@ -486,6 +521,7 @@ public class CommandListener implements Listener {
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
+        plugin.getAuditLogStorage().record("creative-item-drop", playerName, logEntry);
     }
 
     private void logCreativeItemPickup(Player picker, DroppedItemInfo dropInfo) {
@@ -510,5 +546,6 @@ public class CommandListener implements Listener {
         if (plugin.getConfigManager().isFileLoggingEnabled()) {
             writeToLogFile(logEntry);
         }
+        plugin.getAuditLogStorage().record("creative-item-pickup", pickerName, logEntry);
     }
 }

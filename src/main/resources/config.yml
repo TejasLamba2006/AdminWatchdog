@@ -30,6 +30,13 @@ custom-responses:
   # This prevents getting two notifications (one custom, one normal) for the same event
   suppress-normal-logging: false
 
+  # Cap how many custom-response Discord messages a single player/console can trigger
+  # in the time window below. Prevents a spammed monitored command from flooding the webhook.
+  rate-limit:
+    enabled: true
+    max-triggers: 5
+    window-seconds: 60
+
   # Player command responses
   # Use %player%, %command%, %time% placeholders
   player:
@@ -148,6 +155,13 @@ logging:
   # Number of old log files to keep
   keep-old-logs: 5
 
+  # Store logged events in a local SQLite database (data folder/adminwatchdog.db)
+  # so they can be queried with /adminwatchdog history <player>
+  database-logging: true
+
+  # Delete audit log entries older than this many days (0 = keep forever)
+  database-retention-days: 30
+
 # Update checker settings
 update-checker:
   # Enable automatic update checking
@@ -170,4 +184,4 @@ general:
   time-format: "yyyy-MM-dd HH:mm:ss"
 
 # Don't change this unless you know what you're doing
-config-version: 1
+config-version: 2

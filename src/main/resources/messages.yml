@@ -10,11 +10,19 @@ plugin:
 
 # Command feedback
 commands:
-  usage: "Usage: /adminwatchdog <version|v|ver|reload|update|checkupdate>"
+  usage: "Usage: /adminwatchdog <version|v|ver|reload|update|checkupdate|history>"
   version: "AdminWatchdog version: %version%"
   reload-success: "Configuration reloaded."
   reload-failed: "Could not reload the configuration."
   no-permission: "You do not have permission to run that command."
+
+# /adminwatchdog history <player> [limit]
+history:
+  usage: "Usage: /adminwatchdog history <player> [limit]"
+  header: "<gray>--- Audit history for <white>%player%</white> (%count%) ---</gray>"
+  entry: "<gray>[%time%] [%type%]</gray> %detail%"
+  none: "<gray>No audit history found for %player%.</gray>"
+  failed: "<red>Failed to fetch history: %error%</red>"
 
 # Local log output
 logging:

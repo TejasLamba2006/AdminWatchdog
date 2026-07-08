@@ -13,6 +13,7 @@ public final class AdminWatchdog extends JavaPlugin {
     private DiscordManager discordManager;
     private ConfigManager configManager;
     private UpdateChecker updateChecker;
+    private AuditLogStorage auditLogStorage;
     private Metrics metrics;
 
     @Override
@@ -25,6 +26,7 @@ public final class AdminWatchdog extends JavaPlugin {
             configManager = new ConfigManager(this);
             discordManager = new DiscordManager(this);
             updateChecker = new UpdateChecker(this);
+            auditLogStorage = new AuditLogStorage(this);
 
             getServer().getPluginManager().registerEvents(new CommandListener(this), this);
 
@@ -78,6 +80,9 @@ public final class AdminWatchdog extends JavaPlugin {
             if (discordManager != null) {
                 discordManager.shutdown();
             }
+            if (auditLogStorage != null) {
+                auditLogStorage.shutdown();
+            }
             MinecraftApiHelper.shutdown();
             if (configManager != null) {
                 getLogger().info(configManager.getMessage("plugin.disabled"));
@@ -103,5 +108,9 @@ public final class AdminWatchdog extends JavaPlugin {
 
     public UpdateChecker getUpdateChecker() {
         return updateChecker;
+    }
+
+    public AuditLogStorage getAuditLogStorage() {
+        return auditLogStorage;
     }
 }

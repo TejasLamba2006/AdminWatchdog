@@ -1,5 +1,5 @@
 name: AdminWatchdog
-version: "1.4.1"
+version: "1.4.3"
 main: com.github.tejaslamba2006.adminwatchdog.AdminWatchdog
 api-version: "1.21"
 folia-supported: true
@@ -7,7 +7,7 @@ folia-supported: true
 commands:
   adminwatchdog:
     description: "AdminWatchdog plugin commands"
-    usage: "/<command> <version|v|ver|reload|rl|update|checkupdate>"
+    usage: "/<command> <version|v|ver|reload|rl|update|checkupdate|history>"
     aliases: [aw, awdog]
 
 permissions:
@@ -18,10 +18,15 @@ permissions:
       adminwatchdog.monitor: true
       adminwatchdog.update.check: true
       adminwatchdog.update.notify: true
+      adminwatchdog.history: true
     default: op
 
   adminwatchdog.reload:
     description: "Reload plugin configuration"
+    default: op
+
+  adminwatchdog.history:
+    description: "View a player's audit history"
     default: op
 
   adminwatchdog.monitor:

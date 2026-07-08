@@ -7,14 +7,18 @@ import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class Commands implements TabExecutor {
 
     private static final List<String> SUB_COMMANDS = Arrays.asList(
-            "version", "v", "ver", "reload", "rl", "update", "checkupdate");
+            "version", "v", "ver", "reload", "rl", "update", "checkupdate", "history", "hist");
 
     private final AdminWatchdog plugin;
 
@@ -91,10 +95,62 @@ public final class Commands implements TabExecutor {
 
                 return true;
             }
+            case "history", "hist" -> {
+                if (!sender.hasPermission("adminwatchdog.history")) {
+                    sender.sendMessage(plugin.getConfigManager().getMessageComponent("commands.no-permission"));
+                    return true;
+                }
+
+                if (args.length < 2) {
+                    sender.sendMessage(plugin.getConfigManager().getMessageComponent("history.usage"));
+                    return true;
+                }
+
+                String targetPlayer = args[1];
+                int limit = 10;
+                if (args.length >= 3) {
+                    try {
+                        limit = Math.max(1, Math.min(50, Integer.parseInt(args[2])));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+
+                plugin.getAuditLogStorage().getRecentEntries(targetPlayer, limit).thenAccept(entries -> {
+                    if (entries.isEmpty()) {
+                        sendMessageSafely(sender, plugin.getConfigManager().getMessageComponent(
+                                "history.none", "%player%", targetPlayer));
+                        return;
+                    }
+
+                    sendMessageSafely(sender, plugin.getConfigManager().getMessageComponent(
+                            "history.header", "%player%", targetPlayer, "%count%", String.valueOf(entries.size())));
+
+                    DateTimeFormatter timeFormat = DateTimeFormatter
+                            .ofPattern(plugin.getConfig().getString("general.time-format", "yyyy-MM-dd HH:mm:ss"))
+                            .withZone(ZoneId.systemDefault());
+
+                    for (var entry : entries) {
+                        String time = timeFormat.format(Instant.ofEpochMilli(entry.timestamp()));
+                        sendMessageSafely(sender, plugin.getConfigManager().getMessageComponent(
+                                "history.entry",
+                                TIME_PLACEHOLDER, time,
+                                "%type%", entry.type(),
+                                "%detail%", entry.detail()));
+                    }
+                }).exceptionally(ex -> {
+                    sendMessageSafely(sender, plugin.getConfigManager().getMessageComponent(
+                            "history.failed", "%error%", ex.getMessage()));
+                    return null;
+                });
+
+                return true;
+            }
         }
 
         return false;
     }
+
+    private static final String TIME_PLACEHOLDER = "%time%";
 
     @Override
     public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
@@ -109,6 +165,14 @@ public final class Commands implements TabExecutor {
                 }
             }
             return result;
+        }
+
+        if (args.length == 2 && (args[0].equalsIgnoreCase("history") || args[0].equalsIgnoreCase("hist"))) {
+            String current = args[1].toLowerCase();
+            return plugin.getServer().getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(name -> name.toLowerCase().startsWith(current))
+                    .collect(Collectors.toList());
         }
 
         return new ArrayList<>();
